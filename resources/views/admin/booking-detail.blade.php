@@ -57,11 +57,11 @@
                                             <div class="col-sm-4 invoice-col">
                                                 Đến
                                                 <address>
-                                                    <strong>Công ty Mỹ Mỹ Travel</strong>
+                                                    <strong>Công ty ASIA Travel</strong>
                                                     <br>470 Trần Đại Nghĩa
                                                     <br>Bình Dương
                                                     <br>Phone: 1 (804) 123-9876
-                                                    <br>Email: dothanhlong3703@gmail.com
+                                                    <br>Email: ttbthuy892@gmail.com
                                                 </address>
                                             </div>
                                             <!-- /.col -->

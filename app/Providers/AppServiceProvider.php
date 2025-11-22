@@ -5,7 +5,7 @@ namespace App\Providers;
 use App\Models\admin\ContactModel;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Facades\View;
-
+use App\Models\clients\Tours; 
 class AppServiceProvider extends ServiceProvider
 {
     /**
@@ -33,5 +33,16 @@ class AppServiceProvider extends ServiceProvider
             $view->with('unreadCount', $unreadData['countUnread']);
             $view->with('unreadContacts', $unreadData['contacts']);
         });
+      
+        View::composer('clients.blocks.banner_home', function ($view) {
+            $destinations = Tours::getUniqueDestinations();
+            $view->with('destinations', $destinations);
+        });
+
+        View::composer('clients.blocks.banner_home', function ($view) {
+        $destinations = Tours::getUniqueDestinations(); // [ 'Đà Nẵng', 'Cù Lao Chàm', ... ]
+        $view->with('destinations', $destinations);
+        });
+        
     }
 }

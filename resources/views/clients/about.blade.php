@@ -94,7 +94,6 @@
 </section>
 <!-- Features Area end -->
 
-
 <!-- About Us Area start -->
 <section class="about-us-area pt-70 pb-100 rel z-1">
     <div class="container">
@@ -137,7 +136,6 @@
 </section>
 <!-- About Us Area end -->
 
-
 <!-- Team Area start -->
 <section class="about-team-area pb-70 rel z-1">
     <div class="container">
@@ -154,31 +152,30 @@
         <div class="row justify-content-center">
 
             <div class="col-xl-3 col-lg-4 col-sm-6">
-                <div class="team-item hover-content" data-aos="fade-up" data-aos-duration="1500"
-                    data-aos-offset="50">
-                    <img src="{{ asset('clients/assets/images/team/guide5.jpg') }}" alt="Guide">
+                <div class="team-item hover-content" data-aos="fade-up" data-aos-duration="1500" data-aos-offset="50">
+                    <img src="{{ asset('clients/assets/images/team/guide6.jpg') }}" alt="Guide">
                     <div class="content">
-                        <h6>DO LONG</h6>
+                        <h6>TRUONG THUY</h6>
                         <span class="designation">Founder</span>
                         <div class="social-style-one inner-content">
                             <a href="contact.html"><i class="fab fa-twitter"></i></a>
-                            <a href="https://www.facebook.com/dirty.asd"><i class="fab fa-facebook-f"></i></a>
+                            <a href="https://www.facebook.com/thuydeftiny"><i class="fab fa-facebook-f"></i></a>
                             <a href="contact.html"><i class="fab fa-instagram"></i></a>
                             <a href="contact.html"><i class="fab fa-youtube"></i></a>
                         </div>
                     </div>
                 </div>
             </div>
+
             <div class="col-xl-3 col-lg-4 col-sm-6">
-                <div class="team-item hover-content" data-aos="fade-up" data-aos-duration="1500"
-                    data-aos-offset="50">
-                    <img src="{{ asset('clients/assets/images/team/guide6.jpg') }}" alt="Guide">
+                <div class="team-item hover-content" data-aos="fade-up" data-aos-duration="1500" data-aos-offset="50">
+                    <img src="{{ asset('clients/assets/images/team/guide5.jpg') }}" alt="Guide">
                     <div class="content">
-                        <h6>BICH THUY</h6>
-                        <span class="designation">Co-founder</span>
+                        <h6>DO LONG</h6>
+                        <span class="designation">Tour guide</span>
                         <div class="social-style-one inner-content">
                             <a href="contact.html"><i class="fab fa-twitter"></i></a>
-                            <a href="contact.html"><i class="fab fa-facebook-f"></i></a>
+                            <a href="https://www.facebook.com/dirty.asd"><i class="fab fa-facebook-f"></i></a>
                             <a href="contact.html"><i class="fab fa-instagram"></i></a>
                             <a href="contact.html"><i class="fab fa-youtube"></i></a>
                         </div>
@@ -201,8 +198,7 @@
                 kinh nghiệm bạn sẽ nhớ</p>
         </div>
         <div class="row">
-            <div class="col-xl-3 col-lg-4 col-md-6" data-aos="fade-up" data-aos-duration="1500"
-                data-aos-offset="50">
+            <div class="col-xl-3 col-lg-4 col-md-6" data-aos="fade-up" data-aos-duration="1500" data-aos-offset="50">
                 <div class="feature-item style-two">
                     <div class="icon"><i class="flaticon-save-money"></i></div>
                     <div class="content">

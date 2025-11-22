@@ -7,14 +7,14 @@
                 <div class="col-xl-5 col-lg-6" data-aos="fade-up" data-aos-duration="1500" data-aos-offset="50">
                     <div class="footer-widget footer-text">
                         <div class="footer-logo mb-25">
-                            <a href="index.html"><img src="{{ asset('clients/assets/images/logos/logomymy.png') }}"
+                            <a href="index.html"><img src="{{ asset('clients/assets/images/logos/logodulich.png') }}"
                                     alt="Logo"></a>
                         </div>
                         <p>Chúng tôi biên soạn các hành trình riêng biệt phù hợp với sở thích của bạn, đảm bảo mọi
                             chuyến đi đều
                             liền mạch và làm phong phú thêm những viên ngọc ẩn giấu</p>
                         <div class="social-style-one mt-15">
-                            <a href="https://www.facebook.com/xiaoai.ruan"><i class="fab fa-facebook-f"></i></a>
+                            <a href="https://www.facebook.com/thuydeftiny"><i class="fab fa-facebook-f"></i></a>
                             <a href="contact.html"><i class="fab fa-youtube"></i></a>
                             <a href="contact.html"><i class="fab fa-pinterest"></i></a>
                             <a href="contact.html"><i class="fab fa-twitter"></i></a>
@@ -100,9 +100,10 @@
                             <h5>Liên hệ</h5>
                         </div>
                         <ul class="list-style-one">
-                            <li><i class="fal fa-map-marked-alt"></i> 1356 Mỹ Phước Tân Vạn , Phú Lợi , Thủ Dầu Một, Bình Dương</li>
+                            <li><i class="fal fa-map-marked-alt"></i> 1356 Mỹ Phước Tân Vạn , Phú Lợi , Thủ Dầu Một,
+                                TP.Hồ Chí Minh</li>
                             <li><i class="fal fa-envelope"></i> <a
-                                    href="mailto:dothanhlong3703@gmail.com">dothanhlong3703@gmail.com</a></li>
+                                    href="mailto:ttbthuy892@gmail.com">ttbthuy892@gmail.com</a></li>
                             <li><i class="fal fa-clock"></i> Thứ 2 - Thứ 6, 08am - 05pm</li>
                             <li><i class="fal fa-phone-volume"></i> <a href="callto:+88012334588">0898159189</a></li>
                         </ul>
@@ -116,7 +117,7 @@
             <div class="row">
                 <div class="col-lg-5">
                     <div class="copyright-text text-center text-lg-start">
-                        <p>@Copy 2025 <a href="{{ route('home') }}">Mỹ Mỹ Travel</a>, All rights reserved</p>
+                        <p>@Copy 2025 <a href="{{ route('home') }}">Asia Travel</a>, All rights reserved</p>
                     </div>
                 </div>
                 <div class="col-lg-7 text-center text-lg-end">
@@ -168,11 +169,18 @@
 <script src="{{ asset('clients/assets/js/aos.js') }}"></script>
 <!-- Custom script -->
 <script src="{{ asset('clients/assets/js/script.js') }}"></script>
-{{-- jquery-toast  --}}
+{{-- jquery-toast --}}
 <script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.js"></script>
 
-{{-- paypal-payment  --}}
-<script src="https://www.paypal.com/sdk/js?client-id={{ env('PAYPAL_SANDBOX_CLIENT_ID') }}"></script>
+{{-- paypal-payment --}}
+{{--
+<script src="https://www.paypal.com/sdk/js?client-id={{ env('PAYPAL_SANDBOX_CLIENT_ID') }}"></script> --}}
+{{-- paypal-payment chỉ load ở trang thanh toán --}}
+@if (Route::is('createTransaction') || Route::is('processTransaction') || Route::is('successTransaction') || Route::is('cancelTransaction'))
+    <script src="https://www.paypal.com/sdk/js?client-id={{ env('PAYPAL_SANDBOX_CLIENT_ID') }}"></script>
+@endif
+
+
 <!-- Custom script by Dev dien-->
 <script src="{{ asset('clients/assets/js/custom-js.js') }}"></script>
 <script src="{{ asset('clients/assets/js/jquery.datetimepicker.full.min.js') }}"></script>

@@ -181,7 +181,8 @@
                         <div class="col-md-12">
                             <div class="form-group">
                                 <label for="message">Nội dung</label>
-                                <textarea name="message" id="message" class="form-control" rows="5" required=""></textarea>
+                                <textarea name="message" id="message" class="form-control" rows="5"
+                                    required=""></textarea>
                             </div>
                         </div>
                         <div class="col-md-12">
@@ -201,8 +202,7 @@
             <div class="col-lg-4 col-md-8 col-sm-10 rmt-75">
                 <div class="blog-sidebar tour-sidebar">
 
-                    <div class="widget widget-booking" data-aos="fade-up" data-aos-duration="1500"
-                        data-aos-offset="50">
+                    <div class="widget widget-booking" data-aos="fade-up" data-aos-duration="1500" data-aos-offset="50">
                         <h5 class="widget-title">Tour Booking</h5>
                         <form action="{{ route('booking', ['id' => $tourDetail->tourId]) }}" method="POST">
                             @csrf
@@ -232,8 +232,8 @@
                                     </span>
                                 </li>
                                 <li>
-                                    Trẻ em <span
-                                        class="price">{{ number_format($tourDetail->priceChild, 0, ',', '.') }} VND
+                                    Trẻ em <span class="price">{{ number_format($tourDetail->priceChild, 0, ',', '.') }}
+                                        VND
                                     </span>
                                 </li>
                             </ul>
@@ -247,19 +247,17 @@
                         </form>
                     </div>
 
-                    <div class="widget widget-contact" data-aos="fade-up" data-aos-duration="1500"
-                        data-aos-offset="50">
+                    <div class="widget widget-contact" data-aos="fade-up" data-aos-duration="1500" data-aos-offset="50">
                         <h5 class="widget-title">Cần trợ giúp?</h5>
                         <ul class="list-style-one">
                             <li><i class="far fa-envelope"></i> <a
-                                    href="emilto:dothanhlong3703@gmail.com">dothanhlong3703@gmail.com</a></li>
+                                    href="emilto:ttbthuy892@gmail.com">ttbthuy892@gmail.com</a></li>
                             <li><i class="far fa-phone-volume"></i> <a href="callto:+000(123)45688">+000 (123) 456
                                     88</a></li>
                         </ul>
                     </div>
                     @if (!empty($tourRecommendations))
-                        <div class="widget widget-tour" data-aos="fade-up" data-aos-duration="1500"
-                            data-aos-offset="50">
+                        <div class="widget widget-tour" data-aos="fade-up" data-aos-duration="1500" data-aos-offset="50">
                             <h6 class="widget-title">Tours tương tự</h6>
                             @foreach ($tourRecommendations as $tour)
                                 <div class="destination-item tour-grid style-three bgc-lighter">
@@ -277,8 +275,7 @@
                                                 <span>({{ $tour->rating }})</span>
                                             </div>
                                         </div>
-                                        <h6><a
-                                                href="{{ route('tour-detail', ['id' => $tour->tourId]) }}">{{ $tour->title }}</a>
+                                        <h6><a href="{{ route('tour-detail', ['id' => $tour->tourId]) }}">{{ $tour->title }}</a>
                                         </h6>
                                     </div>
                                 </div>

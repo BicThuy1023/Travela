@@ -24,8 +24,7 @@
 
                 <div class="form-group">
                     <label for="tel">Số điện thoại*</label>
-                    <input type="number" id="tel" placeholder="Nhập số điện thoại liên hệ" name="tel"
-                        required>
+                    <input type="number" id="tel" placeholder="Nhập số điện thoại liên hệ" name="tel" required>
                     <span class="error-message" id="telError"></span>
                 </div>
 
@@ -46,8 +45,8 @@
                     <label>Người lớn</label>
                     <div class="input__quanlity">
                         <button type="button" class="quantity-btn">-</button>
-                        <input type="number" class="quantity-input" value="1" min="1" id="numAdults"
-                            name="numAdults" data-price-adults="{{ $tour->priceAdult }}" readonly>
+                        <input type="number" class="quantity-input" value="1" min="1" id="numAdults" name="numAdults"
+                            data-price-adults="{{ $tour->priceAdult }}" readonly>
                         <button type="button" class="quantity-btn">+</button>
                     </div>
                 </div>
@@ -66,7 +65,7 @@
             <div class="privacy-section">
                 <p>Bằng cách nhấp chuột vào nút "ĐỒNG Ý" dưới đây, Khách hàng đồng ý rằng các điều kiện điều khoản
                     này sẽ được áp dụng. Vui lòng đọc kỹ điều kiện điều khoản trước khi lựa chọn sử dụng dịch vụ của
-                    Mỹ Mỹ Travel.</p>
+                    Asia Travel.</p>
                 <div class="privacy-checkbox">
                     <input type="checkbox" id="agree" name="agree" required>
                     <label for="agree">Tôi đã đọc và đồng ý với <a href="#" target="_blank">Điều khoản thanh
@@ -151,7 +150,9 @@
                 <button type="submit" class="booking-btn btn-submit-booking">Xác Nhận</button>
 
                 <button id="btn-momo-payment" class="booking-btn" style="display: none;"
-                    data-urlmomo = "{{ route('createMomoPayment') }}">Thanh toán với Momo <img src="{{ asset('clients/assets/images/booking/icon-thanh-toan-momo.png') }}" alt="" style="width: 10%"></button>
+                    data-urlmomo="{{ route('createMomoPayment') }}">Thanh toán với Momo <img
+                        src="{{ asset('clients/assets/images/booking/icon-thanh-toan-momo.png') }}" alt=""
+                        style="width: 10%"></button>
 
             </div>
         </div>

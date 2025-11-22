@@ -9,7 +9,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
 
     <!-- Title -->
-    <title>Mỹ Mỹ Travel - {{ $title }}</title>
+    <title>Asia Travel {{ $title }}</title>
     <!-- Favicon Icon -->
     <link rel="shortcut icon" href="{{ asset('clients/assets/images/logos/favicon.png') }}" type="image/x-icon">
     <!-- Google Fonts -->
@@ -36,7 +36,7 @@
 
     {{-- boxicons --}}
     <link href='https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css' rel='stylesheet'>
-    {{-- date time picker  --}}
+    {{-- date time picker --}}
     <link rel="stylesheet" href="{{ asset('clients/assets/css/jquery.datetimepicker.min.css') }}" />
     {{-- custom css by Dien --}}
     <link rel="stylesheet" href="{{ asset('clients/assets/css/custom-css.css') }}" />
@@ -61,17 +61,17 @@
                     <div class="header-inner rel d-flex align-items-center">
                         <div class="logo-outer">
                             <div class="logo"><a href="{{ route('home') }}"><img
-                                        src="{{ asset('clients/assets/images/logos/logomymy.png') }}" alt="Logo"
+                                        src="{{ asset('clients/assets/images/logos/logodulich.png') }}" alt="Logo"
                                         title="Logo"></a></div>
                         </div>
 
-                        <div class="nav-outer mx-lg-auto ps-xxl-5 clearfix">S
+                        <div class="nav-outer mx-lg-auto ps-xxl-5 clearfix">
                             <!-- Main Menu -->
                             <nav class="main-menu navbar-expand-lg">
                                 <div class="navbar-header">
                                     <div class="mobile-logo">
                                         <a href="{{ route('home') }}">
-                                            <img src="{{ asset('clients/assets/images/logos/logomymy.png') }}"
+                                            <img src="{{ asset('clients/assets/images/logos/logodulich.png') }}"
                                                 alt="Logo" title="Logo">
                                         </a>
                                     </div>

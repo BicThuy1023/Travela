@@ -39,7 +39,7 @@
                             <div class="content">
                                 <h5>Cần trợ giúp và hỗ trợ</h5>
                                 <div class="text"><i class="far fa-envelope"></i> <a
-                                        href="mailto:dothanhlong3703@gmail.com">dothanhlong3703@gmail.com</a></div>
+                                        href="mailto:ttbthuy892@gmail.com">ttbthuy892@gmail.com</a></div>
                             </div>
                         </div>
                     </div>
@@ -49,7 +49,8 @@
                             <div class="icon"><i class="fas fa-phone"></i></div>
                             <div class="content">
                                 <h5>Cần bất kỳ việc khẩn cấp nào</h5>
-                                <div class="text"><i class="far fa-phone"></i> <a href="callto:+0001234588">0898159189</a></div>
+                                <div class="text"><i class="far fa-phone"></i> <a
+                                        href="callto:+0001234588">0898159189</a></div>
                             </div>
                         </div>
                     </div>
@@ -58,8 +59,9 @@
                             data-aos-delay="50">
                             <div class="icon"><i class="fas fa-map-marker-alt"></i></div>
                             <div class="content">
-                                <h5>Bình Dương</h5>
-                                <div class="text"><i class="fal fa-map-marker-alt"></i> 1356 Mỹ Phước Tân Vạn , Phú Lợi , Thủ Dầu Một, Bình Dương</div>
+                                <h5>TP. Hồ Chí Minh</h5>
+                                <div class="text"><i class="fal fa-map-marker-alt"></i> 1356 Mỹ Phước Tân Vạn , Phú Lợi
+                                    , Thủ Dầu Một, TP. Hồ Chí Mính</div>
                             </div>
                         </div>
                     </div>
@@ -69,7 +71,8 @@
                             <div class="icon"><i class="fas fa-map-marker-alt"></i></div>
                             <div class="content">
                                 <h5>Chi nhánh</h5>
-                                <div class="text"><i class="fal fa-map-marker-alt"></i> Khối 5- Điện Nam Trung - Điện Bàn - Đà Nẵng Quảng Nam</div>
+                                <div class="text"><i class="fal fa-map-marker-alt"></i> Khối 5- Điện Nam Trung - Điện
+                                    Bàn - Gia Lai</div>
                             </div>
                         </div>
                     </div>
@@ -93,7 +96,8 @@
                         <div class="section-title">
                             <h2>Liên hệ</h2>
                         </div>
-                        <p>Địa chỉ email của bạn sẽ không được công bố. Các trường bắt buộc được đánh dấu <span style="color: red">*</span></p>
+                        <p>Địa chỉ email của bạn sẽ không được công bố. Các trường bắt buộc được đánh dấu <span
+                                style="color: red">*</span></p>
                         <div class="row mt-35">
                             <div class="col-md-6">
                                 <div class="form-group">
@@ -119,7 +123,8 @@
                             <div class="col-md-12">
                                 <div class="form-group">
                                     <label for="message">Nội dung <span style="color: red">*</span></label>
-                                    <textarea name="message" id="message" class="form-control" rows="5" placeholder="Nội dung" required></textarea>
+                                    <textarea name="message" id="message" class="form-control" rows="5"
+                                        placeholder="Nội dung" required></textarea>
                                 </div>
                             </div>
                             <div class="col-md-12">
@@ -136,8 +141,7 @@
                 </div>
             </div>
             <div class="col-lg-5">
-                <div class="contact-images-part" data-aos="fade-right" data-aos-duration="1500"
-                    data-aos-offset="50">
+                <div class="contact-images-part" data-aos="fade-right" data-aos-duration="1500" data-aos-offset="50">
                     <div class="row">
                         <div class="col-12">
                             <img src="{{ asset('clients/assets/images/contact/contact1.jpg') }}" alt="Contact">
@@ -151,7 +155,7 @@
                     </div>
                     <div class="circle-logo">
                         <img src="{{ asset('clients/assets/images/contact/icon.png') }}" alt="Logo">
-                        <span class="title h2">Mỹ Mỹ Travel</span>
+                        <span class="title h2">Asia Travel</span>
                     </div>
                 </div>
             </div>
@@ -163,11 +167,9 @@
 
 <!-- Contact Map Start -->
 {{-- <div class="contact-map">
-    <iframe 
-        src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3916.3929031810653!2d106.6678998!3d11.009119199999999!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x3174d1a9d6166525%3A0xe3dfd9b15e2d3244!2zMTM1NiDEkC4gVMOibiBW4bqhbiAtIE3hu7kgUGjGsOG7m2MsIFBow7ogTeG7uSwgVGjhu6cgROG6p3UgTeG7mXQsIELDrG5oIETGsMahbmc!5e0!3m2!1svi!2s!4v1752824147219!5m2!1svi!2s" 
-        style="border:0; width: 100%; height: 300px;" 
-        allowfullscreen="" 
-        loading="lazy" 
+    <iframe
+        src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3916.3929031810653!2d106.6678998!3d11.009119199999999!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x3174d1a9d6166525%3A0xe3dfd9b15e2d3244!2zMTM1NiDEkC4gVMOibiBW4bqhbiAtIE3hu7kgUGjGsOG7m2MsIFBow7ogTeG7uSwgVGjhu6cgROG6p3UgTeG7mXQsIELDrG5oIETGsMahbmc!5e0!3m2!1svi!2s!4v1752824147219!5m2!1svi!2s"
+        style="border:0; width: 100%; height: 300px;" allowfullscreen="" loading="lazy"
         referrerpolicy="no-referrer-when-downgrade">
     </iframe>
 </div> --}}

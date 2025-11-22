@@ -4,14 +4,14 @@
 <!--Form Back Drop-->
 <div class="form-back-drop"></div>
 
-<!-- Destinations Area start -->
+<!-- Destinations Area start Trang Chu -->
 <section class="destinations-area bgc-black pt-100 pb-70 rel z-1">
     <div class="container-fluid">
         <div class="row justify-content-center">
             <div class="col-lg-12">
                 <div class="section-title text-white text-center counter-text-wrap mb-70" data-aos="fade-up"
                     data-aos-duration="1500" data-aos-offset="50">
-                    <h2>Khám phá kho báu việt nam cùng Mỹ Mỹ Travel</h2>
+                    <h2>Khám phá kho báu việt nam cùng ASIA Travel</h2>
                     <p>Website<span class="count-text plus" data-speed="3000" data-stop="24080">0</span>
                         phổ biến nhất mà bạn sẽ nhớ</p>
                 </div>
@@ -49,7 +49,7 @@
 <!-- Destinations Area end -->
 
 
-<!-- About Us Area start -->
+<!-- About Us Area start GIOI THIEU -->
 <section class="about-us-area py-100 rpb-90 rel z-1">
     <div class="container">
         <div class="row align-items-center">
@@ -89,16 +89,16 @@
                     </div>
                     <div class="shape"><img src="{{ asset('clients/assets/images/about/shape2.png') }}" alt="Shape">
                     </div>
-                    <div class="shape"><img src="{{ asset('clients/assets/images/about/shape3.png') }}"
-                            alt="Shape"></div>
-                    <div class="shape"><img src="{{ asset('clients/assets/images/about/shape4.png') }}"
-                            alt="Shape"></div>
-                    <div class="shape"><img src="{{ asset('clients/assets/images/about/shape5.png') }}"
-                            alt="Shape"></div>
-                    <div class="shape"><img src="{{ asset('clients/assets/images/about/shape6.png') }}"
-                            alt="Shape"></div>
-                    <div class="shape"><img src="{{ asset('clients/assets/images/about/shape7.png') }}"
-                            alt="Shape"></div>
+                    <div class="shape"><img src="{{ asset('clients/assets/images/about/shape3.png') }}" alt="Shape">
+                    </div>
+                    <div class="shape"><img src="{{ asset('clients/assets/images/about/shape4.png') }}" alt="Shape">
+                    </div>
+                    <div class="shape"><img src="{{ asset('clients/assets/images/about/shape5.png') }}" alt="Shape">
+                    </div>
+                    <div class="shape"><img src="{{ asset('clients/assets/images/about/shape6.png') }}" alt="Shape">
+                    </div>
+                    <div class="shape"><img src="{{ asset('clients/assets/images/about/shape7.png') }}" alt="Shape">
+                    </div>
                     <img src="{{ asset('clients/assets/images/about/about.png') }}" alt="About">
                 </div>
             </div>
@@ -129,35 +129,35 @@
                         @if ($count == 2 || $count == 3)
                             <!-- Cột thứ 3 và thứ 4 sẽ là col-md-6 -->
                             <div class="col-md-6 item ">
-                            @else
+                        @else
                                 <!-- Các cột còn lại sẽ là col-xl-3 col-md-6 -->
                                 <div class="col-xl-3 col-md-6 item ">
-                        @endif
+                            @endif
 
-                        <div class="destination-item style-two" data-aos-duration="1500" data-aos-offset="50">
-                            <div class="image" style="max-height: 250px">
-                                <a href="#" class="heart"><i class="fas fa-heart"></i></a>
-                                <img src="{{ asset('admin/assets/images/gallery-tours/' . $tour->images[0]) }}"
-                                    alt="Destination">
+                                <div class="destination-item style-two" data-aos-duration="1500" data-aos-offset="50">
+                                    <div class="image" style="max-height: 250px">
+                                        <a href="#" class="heart"><i class="fas fa-heart"></i></a>
+                                        <img src="{{ asset('admin/assets/images/gallery-tours/' . $tour->images[0]) }}"
+                                            alt="Destination">
+                                    </div>
+                                    <div class="content">
+                                        <h6 class="tour-title"><a
+                                                href="{{ route('tour-detail', ['id' => $tour->tourId]) }}">{{ $tour->title }}</a>
+                                        </h6>
+                                        <span class="time">{{ $tour->time }}</span>
+                                        <a href="{{ route('tour-detail', ['id' => $tour->tourId]) }}" class="more"><i
+                                                class="fas fa-chevron-right"></i></a>
+                                    </div>
+                                </div>
+
                             </div>
-                            <div class="content">
-                                <h6 class="tour-title"><a
-                                        href="{{ route('tour-detail', ['id' => $tour->tourId]) }}">{{ $tour->title }}</a>
-                                </h6>
-                                <span class="time">{{ $tour->time }}</span>
-                                <a href="{{ route('tour-detail', ['id' => $tour->tourId]) }}" class="more"><i
-                                        class="fas fa-chevron-right"></i></a>
-                            </div>
-                        </div>
 
-                </div> <!-- Đóng div col-md-6 hoặc col-xl-3 col-md-6 -->
-
-                @php $count++; @endphp
-                @endforeach
+                            @php $count++; @endphp
+                    @endforeach
+                    </div>
+                </div>
             </div>
         </div>
-    </div>
-    </div>
 </section>
 <!-- Popular Destinations Area end -->
 
@@ -279,6 +279,196 @@
     </div>
 </section>
 <!-- CTA Area end -->
+
+{{-- Leaflet CSS/JS --}}
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+{{-- POPUP MAP --}}
+<style>
+    .map-modal-backdrop {
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, .6);
+        display: none;
+        justify-content: center;
+        align-items: center;
+        z-index: 9999;
+    }
+
+    .map-modal {
+        background: #111319;
+        border-radius: 16px;
+        width: 90%;
+        max-width: 900px;
+        padding: 18px 20px 16px;
+        color: #fff;
+        box-shadow: 0 20px 60px rgba(0, 0, 0, .7);
+    }
+
+    #map-popup {
+        width: 100%;
+        height: 420px;
+        border-radius: 12px;
+        overflow: hidden;
+        margin-top: 8px;
+    }
+
+    .map-modal-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .map-modal-footer {
+        margin-top: 12px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        font-size: 13px;
+    }
+
+    .btn-map {
+        border-radius: 999px;
+        padding: 8px 16px;
+        border: none;
+        cursor: pointer;
+        font-size: 13px;
+        font-weight: 600;
+    }
+
+    .btn-map-confirm {
+        background: linear-gradient(90deg, #4caf50, #81c784);
+        color: #000;
+    }
+
+    .btn-map-cancel {
+        background: transparent;
+        color: #ddd;
+    }
+</style>
+
+<div class="map-modal-backdrop" id="map-modal-backdrop">
+    <div class="map-modal">
+        <div class="map-modal-header">
+            <h4 style="margin:0; font-size:18px;">Chọn vị trí trên bản đồ</h4>
+            <button type="button" class="btn-map btn-map-cancel" id="close-map-btn">
+                Đóng
+            </button>
+        </div>
+
+        <div style="margin-top:6px; font-size:13px; color:#ccc;">
+            Click vào bản đồ để đặt marker. Sau đó bấm <strong>Xác nhận vị trí</strong>.
+        </div>
+
+        <div id="map-popup"></div>
+
+        <div class="map-modal-footer">
+            <div>
+                Vĩ độ: <span id="popup-lat">chưa chọn</span> |
+                Kinh độ: <span id="popup-lng">chưa chọn</span>
+            </div>
+            <button type="button" class="btn-map btn-map-confirm" id="confirm-map-btn">
+                Xác nhận vị trí
+            </button>
+        </div>
+    </div>
+</div>
+
+<script>
+    const modalBackdrop = document.getElementById('map-modal-backdrop');
+    const openMapBtn = document.getElementById('open-map-btn');
+    const closeMapBtn = document.getElementById('close-map-btn');
+    const confirmMapBtn = document.getElementById('confirm-map-btn');
+
+    const latText = document.getElementById('popup-lat');
+    const lngText = document.getElementById('popup-lng');
+    const latInput = document.getElementById('search_lat');
+    const lngInput = document.getElementById('search_lng');
+
+    const destinationInput = document.getElementById('destination');
+    const searchForm = document.getElementById('search_form');
+
+    const originalAction = "{{ route('search') }}";
+    const nearbyAction = "{{ route('nearby.tours') }}";
+
+    let map, popupMarker, mapInited = false;
+    const defaultLat = 15.9;
+    const defaultLng = 105.8;
+
+    /** mở popup bản đồ **/
+    openMapBtn.addEventListener('click', function () {
+        modalBackdrop.style.display = 'flex';
+
+        if (!mapInited) {
+            map = L.map('map-popup', {
+                center: [defaultLat, defaultLng],
+                zoom: 6,
+                zoomControl: true,
+                scrollWheelZoom: true,
+                dragging: true,
+            });
+
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                maxZoom: 19
+            }).addTo(map);
+
+            map.on('click', function (e) {
+                const lat = e.latlng.lat.toFixed(7);
+                const lng = e.latlng.lng.toFixed(7);
+
+                if (popupMarker) {
+                    map.removeLayer(popupMarker);
+                }
+                popupMarker = L.marker([lat, lng]).addTo(map);
+
+                latText.textContent = lat;
+                lngText.textContent = lng;
+
+                latInput.value = lat;
+                lngInput.value = lng;
+            });
+
+            mapInited = true;
+        }
+
+        // sửa lỗi map bị lệch khi mở modal
+        setTimeout(() => { map.invalidateSize(); }, 200);
+    });
+
+    /** đóng popup **/
+    function closeModal() {
+        modalBackdrop.style.display = 'none';
+    }
+    closeMapBtn.addEventListener('click', closeModal);
+    modalBackdrop.addEventListener('click', function (e) {
+        if (e.target === modalBackdrop) closeModal();
+    });
+
+    /** xác nhận vị trí **/
+    confirmMapBtn.addEventListener('click', function () {
+        if (!latInput.value || !lngInput.value) {
+            alert('Bạn chưa chọn vị trí trên bản đồ.');
+            return;
+        }
+
+        destinationInput.value = 'Đã chọn vị trí trên bản đồ';
+        closeModal();
+    });
+
+    /** xử lý gửi form **/
+    searchForm.addEventListener('submit', function () {
+        // Nếu có lat & lng thì chắc chắn là search theo bản đồ
+        const hasCoords = latInput && lngInput && latInput.value !== '' && lngInput.value !== '';
+
+        if (hasCoords) {
+            searchForm.action = nearbyAction;
+        } else {
+            searchForm.action = originalAction;
+        }
+    });
+</script>
+
 
 
 @include('clients.blocks.footer_home')

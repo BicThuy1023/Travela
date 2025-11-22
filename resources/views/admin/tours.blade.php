@@ -110,8 +110,7 @@
                                 </li>
                             </ul>
                             <div id="step-1">
-                                <form class="form-info-tour" method="POST"
-                                    id="form-step1">
+                                <form class="form-info-tour" method="POST" id="form-step1">
                                     @csrf
                                     <div class="field item form-group">
                                         <label class="col-form-label col-md-3 col-sm-3  label-align">Tên
@@ -168,7 +167,8 @@
                                             hành<span>*</span></label>
                                         <div class="col-md-6 col-sm-6">
                                             <input type="text" class="form-control datetimepicker" id="start_date"
-                                                name="start_date" disabled>
+                                                name="start_date" required>
+                                            <!-- /disabled -->
                                         </div>
                                     </div>
                                     <div class="field item form-group">
@@ -176,7 +176,7 @@
                                             thúc<span>*</span></label>
                                         <div class="col-md-6 col-sm-6">
                                             <input type="text" class="form-control datetimepicker" id="end_date"
-                                                name="end_date" disabled>
+                                                name="end_date" required>
                                         </div>
                                     </div>
 
@@ -192,8 +192,8 @@
                             </div>
                             <div id="step-2">
                                 <h2 class="StepTitle">Thêm hình ảnh</h2>
-                                <form action="" class="dropzone dz-clickable"
-                                    id="myDropzone-listTour" enctype="multipart/form-data">
+                                <form action="" class="dropzone dz-clickable" id="myDropzone-listTour"
+                                    enctype="multipart/form-data">
                                     @csrf
                                     <div class="dz-default dz-message">
                                         <span>Chọn hình ảnh về tours để upload</span>

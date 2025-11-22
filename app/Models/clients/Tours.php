@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\DB;
 
+
 class Tours extends Model
 {
     use HasFactory;
@@ -121,6 +122,7 @@ class Tours extends Model
         // In ra câu lệnh SQL đã ghi lại (nếu cần thiết)
         $queryLog = DB::getQueryLog();
 
+        /** @var \stdClass $tour */
         // Lấy danh sách hình ảnh cho mỗi tour
         foreach ($tours as $tour) {
             $tour->images = DB::table('tbl_images')
@@ -228,6 +230,7 @@ class Tours extends Model
         $tours = $tours->where('availability', 1);
         $tours = $tours->limit(12)->get();
 
+        /** @var \stdClass $tour */
         foreach ($tours as $tour) {
             // Lấy danh sách hình ảnh thuộc về tour
             $tour->images = DB::table('tbl_images')
@@ -253,6 +256,7 @@ class Tours extends Model
             ->whereIn('tourId', $ids)
             ->orderByRaw("FIELD(tourId, " . implode(',', array_map('intval', $ids)) . ")") // Chuyển tất cả các giá trị sang kiểu int và giữ thứ tự
             ->get();
+        /** @var \stdClass $tour */
         foreach ($toursRecom as $tour) {
             // Lấy danh sách hình ảnh thuộc về tour
             $tour->images = DB::table('tbl_images')
@@ -296,7 +300,7 @@ class Tours extends Model
             ->take($quantity)
             ->get();
 
-
+         /** @var \stdClass $tour */
         foreach ($toursPopular as $tour) {
             // Lấy danh sách hình ảnh thuộc về tour
             $tour->images = DB::table('tbl_images')
@@ -322,6 +326,7 @@ class Tours extends Model
             ->whereIn('tourId', $ids)
             ->orderByRaw("FIELD(tourId, " . implode(',', array_map('intval', $ids)) . ")") // Chuyển tất cả các giá trị sang kiểu int và giữ thứ tự
             ->get();
+        /** @var \stdClass $tour */
         foreach ($tourSearch as $tour) {
             // Lấy danh sách hình ảnh thuộc về tour
             $tour->images = DB::table('tbl_images')
@@ -333,5 +338,42 @@ class Tours extends Model
 
         return $tourSearch;
     }
+    public static function getUniqueDestinations(): array
+    {
+    // Lấy toàn bộ cột destination còn hoạt động
+    $rows = DB::table('tbl_tours')
+        ->where('availability', 1)
+        ->whereNotNull('destination')
+        ->pluck('destination')   // Collection các giá trị
+        ->toArray();             // => mảng PHP bình thường
+
+    $unique = [];
+
+    foreach ($rows as $destination) {
+        // Ép kiểu cho chắc, để Intelephense biết là string
+        $destination = (string) $destination;
+
+        // Ví dụ: "ĐÀ NẴNG – CÙ LAO CHÀM – HỘI AN – BÀ NÀ"
+        // Tách theo gạch ngang dài/ngắn hoặc dấu phẩy
+        $parts = preg_split('/\s*[–\-]\s*|\s*,\s*/u', $destination);
+
+        foreach ($parts as $part) {
+            $part = trim((string) $part);
+            if ($part === '') {
+                continue;
+            }
+
+            // Chuẩn hoá: "đÀ nẴnG" => "Đà Nẵng"
+            $lower = mb_strtolower($part, 'UTF-8');
+            $label = mb_convert_case($lower, MB_CASE_TITLE, 'UTF-8');
+
+            // Dùng key để chống trùng lặp
+            $unique[$label] = $label;
+        }
+    }
+
+    // Trả về mảng các tên địa điểm duy nhất
+    return array_values($unique);
+}
 
 }

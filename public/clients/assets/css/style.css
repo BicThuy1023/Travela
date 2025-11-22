@@ -3241,6 +3241,26 @@ h6, .h6, blockquote {
 /*******************************************************/
 /******************* ## Header style *******************/
 /*******************************************************/
+/* Placeholder luôn mờ kể cả khi focus */
+.my-input::placeholder {
+    color: #888;
+    opacity: 1; /* QUAN TRỌNG */
+}
+
+/* Không đổi màu khi focus */
+.my-input:focus::placeholder {
+    color: #888;
+    opacity: 1;
+}
+.my-input {
+    width: 100%;
+    padding: 10px 12px;
+    border-radius: 4px;
+    font-size: 15px;
+    
+}
+
+
 .main-header {
   position: relative;
   left: 0px;

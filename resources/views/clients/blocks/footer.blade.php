@@ -1,28 +1,27 @@
 <!-- footer area start -->
-<footer class="main-footer footer-two bgp-bottom bgc-black rel z-15 pt-100 pb-115" style="background-image: url({{ asset('clients/assets/images/backgrounds/footer-two.png')}});">
+<footer class="main-footer footer-two bgp-bottom bgc-black rel z-15 pt-100 pb-115"
+    style="background-image: url({{ asset('clients/assets/images/backgrounds/footer-two.png')}});">
     <div class="widget-area">
         <div class="container">
             <div class="row row-cols-xxl-5 row-cols-xl-4 row-cols-md-3 row-cols-2">
                 <div class="col col-small" data-aos="fade-up" data-aos-duration="1500" data-aos-offset="50">
                     <div class="footer-widget footer-text">
                         <div class="footer-logo mb-40">
-                            <a href="{{ route('home') }}"><img src="{{ asset('clients/assets/images/logos/logomymy.png') }}" alt="Logo"></a>
+                            <a href="{{ route('home') }}"><img
+                                    src="{{ asset('clients/assets/images/logos/logodulich.png') }}" alt="Logo"></a>
                         </div>
                         <div class="footer-map">
-  <iframe 
-    src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3916.3929031810653!2d106.6678998!3d11.009119199999999!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x3174d1a9d6166525%3A0xe3dfd9b15e2d3244!2zMTM1NiDEkC4gVMOibiBW4bqhbiAtIE3hu7kgUGjGsOG7m2MsIFBow7ogTeG7uSwgVGjhu6cgROG6p3UgTeG7mXQsIELDrG5oIETGsMahbmc!5e0!3m2!1svi!2s!4v1752824147219!5m2!1svi!2s" 
-    width="100%" 
-    height="300" 
-    style="border:0;" 
-    allowfullscreen="" 
-    loading="lazy" 
-    referrerpolicy="no-referrer-when-downgrade">
-  </iframe>
-</div>
+                            <iframe
+                                src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3916.3929031810653!2d106.6678998!3d11.009119199999999!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x3174d1a9d6166525%3A0xe3dfd9b15e2d3244!2zMTM1NiDEkC4gVMOibiBW4bqhbiAtIE3hu7kgUGjGsOG7m2MsIFBow7ogTeG7uSwgVGjhu6cgROG6p3UgTeG7mXQsIELDrG5oIETGsMahbmc!5e0!3m2!1svi!2s!4v1752824147219!5m2!1svi!2s"
+                                width="100%" height="300" style="border:0;" allowfullscreen="" loading="lazy"
+                                referrerpolicy="no-referrer-when-downgrade">
+                            </iframe>
+                        </div>
 
                     </div>
                 </div>
-                <div class="col col-small" data-aos="fade-up" data-aos-delay="50" data-aos-duration="1500" data-aos-offset="50">
+                <div class="col col-small" data-aos="fade-up" data-aos-delay="50" data-aos-duration="1500"
+                    data-aos-offset="50">
                     <div class="footer-widget footer-links ms-sm-5">
                         <div class="footer-title">
                             <h5>Dịch vụ</h5>
@@ -34,7 +33,8 @@
                         </ul>
                     </div>
                 </div>
-                <div class="col col-small" data-aos="fade-up" data-aos-delay="100" data-aos-duration="1500" data-aos-offset="50">
+                <div class="col col-small" data-aos="fade-up" data-aos-delay="100" data-aos-duration="1500"
+                    data-aos-offset="50">
                     <div class="footer-widget footer-links ms-md-4">
                         <div class="footer-title">
                             <h5>Công ty</h5>
@@ -46,7 +46,8 @@
                         </ul>
                     </div>
                 </div>
-                <div class="col col-small" data-aos="fade-up" data-aos-delay="150" data-aos-duration="1500" data-aos-offset="50">
+                <div class="col col-small" data-aos="fade-up" data-aos-delay="150" data-aos-duration="1500"
+                    data-aos-offset="50">
                     <div class="footer-widget footer-links ms-lg-4">
                         <div class="footer-title">
                             <h5>Điểm đến</h5>
@@ -58,15 +59,17 @@
                         </ul>
                     </div>
                 </div>
-                <div class="col col-md-6 col-10 col-small" data-aos="fade-up" data-aos-delay="200" data-aos-duration="1500" data-aos-offset="50">
+                <div class="col col-md-6 col-10 col-small" data-aos="fade-up" data-aos-delay="200"
+                    data-aos-duration="1500" data-aos-offset="50">
                     <div class="footer-widget footer-contact">
                         <div class="footer-title">
                             <h5>Liên hệ</h5>
                         </div>
                         <ul class="list-style-one">
-                            <li><i class="fal fa-map-marked-alt"></i> 1356 Mỹ Phước Tân Vạn , Phú Lợi , Thủ Dầu Một, Bình Dương</li>
+                            <li><i class="fal fa-map-marked-alt"></i> 1356 Mỹ Phước Tân Vạn , Phú Lợi , Thủ Dầu Một,
+                                TP.Hồ Chí Minh</li>
                             <li><i class="fal fa-envelope"></i> <a
-                                    href="mailto:dothanhlong3703@gmail.com">dothanhlong3703@gmail.com</a></li>
+                                    href="mailto:ttbthuy892@gmail.com">ttbthuy892@gmail.com</a></li>
                             <li><i class="fal fa-phone-volume"></i> <a href="callto:+88012334588">0898159189</a></li>
                         </ul>
                     </div>
@@ -77,19 +80,19 @@
     <div class="footer-bottom bg-transparent pt-20 pb-5">
         <div class="container">
             <div class="row">
-               <div class="col-lg-5">
+                <div class="col-lg-5">
                     <div class="copyright-text text-center text-lg-start">
-                        <p>@Copy 2025 <a href="\">Mỹ Mỹ Travel</a>, All rights reserved</p>
+                        <p>@Copy 2025 <a href="\">Asia Travel</a>, All rights reserved</p>
                     </div>
-               </div>
-               <div class="col-lg-7 text-center text-lg-end">
-                   <ul class="footer-bottom-nav">
-                    <li><a href="{{ route('about') }}">Điều khoản</a></li>
-                    <li><a href="{{ route('about') }}">Chính sách bảo mật</a></li>
-                    <li><a href="{{ route('about') }}">Thông báo pháp lý</a></li>
-                    <li><a href="{{ route('about') }}">Khả năng truy cập</a></li>
-                   </ul>
-               </div>
+                </div>
+                <div class="col-lg-7 text-center text-lg-end">
+                    <ul class="footer-bottom-nav">
+                        <li><a href="{{ route('about') }}">Điều khoản</a></li>
+                        <li><a href="{{ route('about') }}">Chính sách bảo mật</a></li>
+                        <li><a href="{{ route('about') }}">Thông báo pháp lý</a></li>
+                        <li><a href="{{ route('about') }}">Khả năng truy cập</a></li>
+                    </ul>
+                </div>
             </div>
         </div>
     </div>
@@ -99,44 +102,51 @@
 </div>
 <!--End pagewrapper-->
 
-    @if(session('error'))
-        <script>
-            alert("{{ session('error') }}");
-        </script>
-    @endif
-    <!-- Jquery -->
-    <script src="{{asset('clients/assets/js/jquery-3.6.0.min.js')}}"></script>
-    <!-- Bootstrap -->
-    <script src="{{asset('clients/assets/js/bootstrap.min.js')}}"></script>
-    <!-- Appear Js -->
-    <script src="{{asset('clients/assets/js/appear.min.js')}}"></script>
-    <!-- Slick -->
-    <script src="{{asset('clients/assets/js/slick.min.js')}}"></script>
-    <!-- Magnific Popup -->
-    <script src="{{asset('clients/assets/js/jquery.magnific-popup.min.js')}}"></script>
-    <!-- Nice Select -->
-    <script src="{{asset('clients/assets/js/jquery.nice-select.min.js')}}"></script>
-    <!-- Image Loader -->
-    <script src="{{asset('clients/assets/js/imagesloaded.pkgd.min.js')}}"></script>
-    <!-- Skillbar -->
-    <script src="{{asset('clients/assets/js/skill.bars.jquery.min.js')}}"></script>
-    <!-- Jquery UI -->
-    <script src="{{asset('clients/assets/js/jquery-ui.min.js')}}"></script>
-    <!-- Isotope -->
-    <script src="{{asset('clients/assets/js/isotope.pkgd.min.js')}}"></script>
-    <!--  AOS Animation -->
-    <script src="{{asset('clients/assets/js/aos.js')}}"></script>
-    <!-- Custom script -->
-    <script src="{{asset('clients/assets/js/script.js')}}"></script>
-    {{-- jquery-toast  --}}
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.js"></script>
+@if(session('error'))
+    <script>
+        alert("{{ session('error') }}");
+    </script>
+@endif
+<!-- Jquery -->
+<script src="{{asset('clients/assets/js/jquery-3.6.0.min.js')}}"></script>
+<!-- Bootstrap -->
+<script src="{{asset('clients/assets/js/bootstrap.min.js')}}"></script>
+<!-- Appear Js -->
+<script src="{{asset('clients/assets/js/appear.min.js')}}"></script>
+<!-- Slick -->
+<script src="{{asset('clients/assets/js/slick.min.js')}}"></script>
+<!-- Magnific Popup -->
+<script src="{{asset('clients/assets/js/jquery.magnific-popup.min.js')}}"></script>
+<!-- Nice Select -->
+<script src="{{asset('clients/assets/js/jquery.nice-select.min.js')}}"></script>
+<!-- Image Loader -->
+<script src="{{asset('clients/assets/js/imagesloaded.pkgd.min.js')}}"></script>
+<!-- Skillbar -->
+<script src="{{asset('clients/assets/js/skill.bars.jquery.min.js')}}"></script>
+<!-- Jquery UI -->
+<script src="{{asset('clients/assets/js/jquery-ui.min.js')}}"></script>
+<!-- Isotope -->
+<script src="{{asset('clients/assets/js/isotope.pkgd.min.js')}}"></script>
+<!--  AOS Animation -->
+<script src="{{asset('clients/assets/js/aos.js')}}"></script>
+<!-- Custom script -->
+<script src="{{asset('clients/assets/js/script.js')}}"></script>
+{{-- jquery-toast --}}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.js"></script>
 
-    {{-- paypal-payment  --}}
+{{-- paypal-payment --}}
+{{--
+<script src="https://www.paypal.com/sdk/js?client-id={{ env('PAYPAL_SANDBOX_CLIENT_ID') }}"></script> --}}
+
+{{-- paypal-payment chỉ load ở trang thanh toán --}}
+@if (Route::is('createTransaction') || Route::is('processTransaction') || Route::is('successTransaction') || Route::is('cancelTransaction'))
     <script src="https://www.paypal.com/sdk/js?client-id={{ env('PAYPAL_SANDBOX_CLIENT_ID') }}"></script>
+@endif
 
-    <!-- Custom script by Dev dien-->
-    <script src="{{asset('clients/assets/js/custom-js.js')}}"></script>
-    <script src="{{asset('clients/assets/js/jquery.datetimepicker.full.min.js')}}"></script>
+
+<!-- Custom script by Dev dien-->
+<script src="{{asset('clients/assets/js/custom-js.js')}}"></script>
+<script src="{{asset('clients/assets/js/jquery.datetimepicker.full.min.js')}}"></script>
 
 </body>
 

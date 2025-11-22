@@ -25,6 +25,7 @@ use App\Http\Controllers\clients\PayPalController;
 use App\Http\Controllers\clients\SearchController;
 use App\Http\Controllers\clients\TourBookedController;
 
+use App\Http\Controllers\Dev\ToolController;
 /*
 |--------------------------------------------------------------------------
 | Web Routes
@@ -42,6 +43,9 @@ Route::get('/about', [AboutController::class, 'index'])->name('about');
 Route::get('/destination', [DestinationController::class, 'index'])->name('destination');
 Route::get('/travel-guides', [TravelGuidesController::class, 'index'])->name('team');
 
+Route::get('/nearby-tours', [SearchController::class, 'searchNearby'])
+->name('nearby.tours');
+Route::get('/dev/update-tour-locations', [ToolController::class, 'updateTourLocations']);
 //Handle Login
 Route::get('/login', [LoginController::class, 'index'])->name('login');
 Route::post('/register', [LoginController::class, 'register'])->name('register');
@@ -150,5 +154,7 @@ Route::prefix('admin')->middleware('admin')->group(function () {
     //Contact management
     Route::get('/contact', [ContactManagementController::class, 'index'])->name('admin.contact');
     Route::post('/reply-contact', [ContactManagementController::class, 'replyContact'])->name('admin.reply-contact');
+
+
 
 });
