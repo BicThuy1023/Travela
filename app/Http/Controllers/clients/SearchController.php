@@ -22,20 +22,19 @@ class SearchController extends Controller
         $this->tours = new Tours();
     }
 
-/**
- * Trang /search: nhận keyword + ngày từ form, truyền cho view
- * Việc tìm kiếm thực tế sẽ do JS gọi API searchToursAjax()
- */
-   public function index(Request $request)
-{
-    $title     = 'Tìm kiếm';
-    $keyword   = $request->input('keyword', '');
-    $startDate = $request->input('start_date', '');
-    $endDate   = $request->input('end_date', '');
+    /**
+     * Trang /search: nhận keyword + ngày từ form, truyền cho view
+     * Việc tìm kiếm thực tế sẽ do JS gọi API searchToursAjax()
+     */
+    public function index(Request $request)
+    {
+        $title     = 'Tìm kiếm';
+        $keyword   = $request->input('keyword', '');
+        $startDate = $request->input('start_date', '');
+        $endDate   = $request->input('end_date', '');
 
-    return view('clients.search', compact('title', 'keyword', 'startDate', 'endDate'));
-}
-
+        return view('clients.search', compact('title', 'keyword', 'startDate', 'endDate'));
+    }
 
     /**
      * Tìm kiếm bằng keyword (voice/text) + AI Python (route: /search-voice-text)
@@ -78,105 +77,171 @@ class SearchController extends Controller
     }
 
     /**
-     * API cho JS: tìm tour theo keyword (không phân biệt dấu) + ngày
+     * API cho JS: tìm tour theo keyword (không phân biệt dấu) + ngày + điểm bắt đầu/kết thúc (toạ độ)
      * Route trong api.php: /api/search-tours-js
      */
     public function searchToursAjax(Request $request)
 {
     try {
-        $keyword        = $request->get('keyword', '');
-        $startDateInput = $request->get('start_date'); // d/m/Y
-        $endDateInput   = $request->get('end_date');   // d/m/Y
+        Log::info('=== SEARCH API CALLED ===');
 
-        // Chuẩn hóa keyword: lowercase + bỏ dấu
-        $normalizedKeyword = $this->vn_to_str(mb_strtolower(trim($keyword)));
+        $keyword        = $request->get('keyword', '');
+        $startDateInput = $request->get('start_date');
+        $endDateInput   = $request->get('end_date');
+
+        $filterStartLat = $request->get('start_lat');
+        $filterStartLng = $request->get('start_lng');
+        $filterEndLat   = $request->get('end_lat');
+        $filterEndLng   = $request->get('end_lng');
+
+        Log::info('Params', [
+            'keyword'     => $keyword,
+            'start_lat'   => $filterStartLat,
+            'start_lng'   => $filterStartLng,
+            'end_lat'     => $filterEndLat,
+            'end_lng'     => $filterEndLng,
+            'start_date'  => $startDateInput,
+            'end_date'    => $endDateInput,
+        ]);
 
         // Đổi định dạng ngày
         $startDate = null;
         $endDate   = null;
 
-        if (!empty($startDateInput)) {
+        if ($startDateInput) {
             try {
                 $startDate = Carbon::createFromFormat('d/m/Y', $startDateInput)->format('Y-m-d');
             } catch (\Exception $e) {
-                Log::warning('searchToursAjax: start_date không đúng định dạng', [
-                    'value' => $startDateInput,
-                    'error' => $e->getMessage(),
-                ]);
+                Log::warning('Invalid start_date format', ['error' => $e->getMessage()]);
             }
         }
 
-        if (!empty($endDateInput)) {
+        if ($endDateInput) {
             try {
                 $endDate = Carbon::createFromFormat('d/m/Y', $endDateInput)->format('Y-m-d');
             } catch (\Exception $e) {
-                Log::warning('searchToursAjax: end_date không đúng định dạng', [
-                    'value' => $endDateInput,
-                    'error' => $e->getMessage(),
-                ]);
+                Log::warning('Invalid end_date format', ['error' => $e->getMessage()]);
             }
         }
 
-        // Lấy tất cả tour còn hoạt động
-        $tours = DB::table('tbl_tours')
-            ->where('availability', 1)
-            ->get();
+        // Logic bắt buộc đủ 4 tọa độ
+        $hasAnyRouteParam =
+            ($filterStartLat !== null && $filterStartLat !== '') ||
+            ($filterStartLng !== null && $filterStartLng !== '') ||
+            ($filterEndLat   !== null && $filterEndLat   !== '') ||
+            ($filterEndLng   !== null && $filterEndLng   !== '');
 
-        // Lọc theo ngày (nếu có)
-        if (!empty($startDate)) {
-            $tours = $tours->filter(function ($tour) use ($startDate) {
-                return $tour->startDate >= $startDate;
-            });
+        $routeFilterEnabled =
+            ($filterStartLat !== null && $filterStartLat !== '') &&
+            ($filterStartLng !== null && $filterStartLng !== '') &&
+            ($filterEndLat   !== null && $filterEndLat   !== '') &&
+            ($filterEndLng   !== null && $filterEndLng   !== '');
+
+        Log::info('Route filter detection', [
+            'hasAnyRouteParam'   => $hasAnyRouteParam,
+            'routeFilterEnabled' => $routeFilterEnabled,
+        ]);
+
+        if ($hasAnyRouteParam && !$routeFilterEnabled) {
+            Log::warning('Missing one of 4 route params -> return empty');
+            return response()->json([
+                'success' => true,
+                'data'    => [],
+            ], 200);
         }
 
-        if (!empty($endDate)) {
-            $tours = $tours->filter(function ($tour) use ($endDate) {
-                return $tour->endDate <= $endDate;
-            });
+        // Build query
+        $query = DB::table('tbl_tours')
+            ->where('availability', 1);
+
+        if ($routeFilterEnabled) {
+            $query->where('location_lat', $filterStartLat)
+                  ->where('location_lng', $filterStartLng)
+                  ->where('end_lat', $filterEndLat)
+                  ->where('end_lng', $filterEndLng);
         }
 
-        // Lọc theo keyword (không dấu) theo destination + title
-        if ($normalizedKeyword !== '') {
+        if ($startDate) {
+            $query->whereDate('startDate', '>=', $startDate);
+        }
+
+        if ($endDate) {
+            $query->whereDate('endDate', '<=', $endDate);
+        }
+
+        Log::info('SQL built', [
+            'sql'      => $query->toSql(),
+            'bindings' => $query->getBindings(),
+        ]);
+
+        $tours = $query->select(
+            'tourId',
+            'title',
+            'destination',
+            'time',
+            'quantity',
+            'priceAdult',
+            'startDate',
+            'endDate',
+            'location_lat',
+            'location_lng',
+            'end_lat',
+            'end_lng'
+        )->get();
+
+        Log::info('Tours after DB query', ['count' => $tours->count()]);
+
+        // Lọc keyword không dấu (nếu có)
+        if ($keyword !== '') {
+            $normalizedKeyword = $this->vn_to_str(mb_strtolower(trim($keyword)));
+            $before = $tours->count();
+
             $tours = $tours->filter(function ($tour) use ($normalizedKeyword) {
                 $dest  = $tour->destination ?? '';
                 $title = $tour->title ?? '';
 
-                $normalizedDest  = $this->vn_to_str(mb_strtolower($dest));
-                $normalizedTitle = $this->vn_to_str(mb_strtolower($title));
+                $nd = $this->vn_to_str(mb_strtolower($dest));
+                $nt = $this->vn_to_str(mb_strtolower($title));
 
-                return str_contains($normalizedDest, $normalizedKeyword)
-                    || str_contains($normalizedTitle, $normalizedKeyword);
+                return str_contains($nd, $normalizedKeyword)
+                    || str_contains($nt, $normalizedKeyword);
             });
+
+            Log::info('Tours after keyword filter', [
+                'before'  => $before,
+                'after'   => $tours->count(),
+                'keyword' => $normalizedKeyword,
+            ]);
         }
 
-        // Gắn hình ảnh cho từng tour
+        // Gắn ảnh
         $tourIds = $tours->pluck('tourId')->all();
+        Log::info('Attach images for tourIds', $tourIds);
 
         if (!empty($tourIds)) {
             $imageList = DB::table('tbl_images')
                 ->whereIn('tourId', $tourIds)
-                ->select('tourId', 'imageURL')
+                ->select('tourId', 'imageUrl')
                 ->orderBy('imageId')
                 ->get()
                 ->groupBy('tourId');
 
             $tours = $tours->map(function ($tour) use ($imageList) {
                 $tour->images = isset($imageList[$tour->tourId])
-                    ? $imageList[$tour->tourId]->pluck('imageURL')->toArray()
+                    ? $imageList[$tour->tourId]->pluck('imageUrl')->toArray()
                     : [];
-
                 return $tour;
             });
-        } else {
-            // Không có tour nào, vẫn trả mảng rỗng
-            $tours = collect();
         }
-         // ➜ TÍNH RATING CHO TỪNG TOUR (dùng model Tours như trang home)
-        $toursModel = new Tours();
+
+        // Gắn rating
+        $model = new Tours();
         foreach ($tours as $tour) {
-            $stats = $toursModel->reviewStats($tour->tourId);
-            $tour->rating = $stats->averageRating ?? 0; // nếu null thì 0
+            $stats        = $model->reviewStats($tour->tourId);
+            $tour->rating = $stats->averageRating ?? 0;
         }
+
+        Log::info('Final result count', ['count' => $tours->count()]);
 
         return response()->json([
             'success' => true,
@@ -184,14 +249,14 @@ class SearchController extends Controller
         ], 200);
 
     } catch (\Throwable $e) {
-        // Nếu có lỗi bất ngờ, log lại và trả JSON chuẩn (status 200 để JS không bị lỗi .json())
-        Log::error('searchToursAjax error: ' . $e->getMessage(), [
-            'trace' => $e->getTraceAsString(),
+        Log::error('searchToursAjax FATAL', [
+            'message' => $e->getMessage(),
+            'trace'   => $e->getTraceAsString(),
         ]);
 
         return response()->json([
             'success' => false,
-            'message' => 'Có lỗi xảy ra khi tìm kiếm tour.',
+            'message' => 'Lỗi server.',
         ], 200);
     }
 }
@@ -224,35 +289,79 @@ class SearchController extends Controller
 
         return $str;
     }
+
+    /**
+     * Tìm tour gần vị trí được chọn trên bản đồ (nearby-tours)
+     */
     public function searchNearby(Request $request)
 {
-    $lat = $request->query('lat');
-    $lng = $request->query('lng');
-    $keyword   = $request->query('keyword', null);
-    $startDate = $request->query('start_date', null);
-    $endDate   = $request->query('end_date', null);
+    // Toạ độ người dùng chọn trên bản đồ
+    $startLat = $request->query('start_lat');
+    $startLng = $request->query('start_lng');
+    $endLat   = $request->query('end_lat');
+    $endLng   = $request->query('end_lng');
 
-    $tours  = collect();
-    $radius = 50; // km
+    $radiusKm = 50; // bán kính tìm gần (km) – cần chặt thì giảm xuống 30km chẳng hạn
 
-    if ($lat && $lng) {
-        $tours = DB::table('tbl_tours')
-            ->where('availability', 1)
-            ->whereNotNull('location_lat')
-            ->whereNotNull('location_lng')
-            ->selectRaw("
-                *,
-                (6371 * acos(
+    $tours = collect();
+
+    if ($startLat && $startLng) {
+
+        // Chuẩn bị selectRaw + bindings cho Haversine
+        $bindings = [
+            $startLat, $startLng, $startLat,   // cho start_distance
+        ];
+
+        $select = "
+            tbl_tours.*,
+            ROUND(
+                6371 * acos(
                     cos(radians(?)) *
                     cos(radians(location_lat)) *
                     cos(radians(location_lng) - radians(?)) +
                     sin(radians(?)) *
                     sin(radians(location_lat))
-                )) AS distance
-            ", [$lat, $lng, $lat])
-            ->having('distance', '<=', $radius)
-            ->orderBy('distance', 'asc')
-            ->get();
+                ),
+                1
+            ) AS start_distance
+        ";
+
+        // Nếu có cả điểm cuối thì tính luôn khoảng cách đến end_lat/end_lng
+        if ($endLat && $endLng) {
+            $select .= ",
+            ROUND(
+                6371 * acos(
+                    cos(radians(?)) *
+                    cos(radians(end_lat)) *
+                    cos(radians(end_lng) - radians(?)) +
+                    sin(radians(?)) *
+                    sin(radians(end_lat))
+                ),
+                1
+            ) AS end_distance
+            ";
+
+            $bindings = array_merge($bindings, [
+                $endLat, $endLng, $endLat,     // cho end_distance
+            ]);
+        }
+
+        $query = DB::table('tbl_tours')
+            ->where('availability', 1)
+            ->whereNotNull('location_lat')
+            ->whereNotNull('location_lng')
+            ->whereNotNull('end_lat')
+            ->whereNotNull('end_lng')
+            ->selectRaw($select, $bindings)
+            ->having('start_distance', '<=', $radiusKm)
+            ->orderBy('start_distance', 'asc');
+
+        // Nếu có chọn điểm cuối thì tour cũng phải kết thúc gần điểm đó
+        if ($endLat && $endLng) {
+            $query->having('end_distance', '<=', $radiusKm);
+        }
+
+        $tours = $query->get();
 
         // Gắn ảnh
         $tourIds = $tours->pluck('tourId')->all();
@@ -260,16 +369,15 @@ class SearchController extends Controller
         if (!empty($tourIds)) {
             $imageList = DB::table('tbl_images')
                 ->whereIn('tourId', $tourIds)
-                ->select('tourId', 'imageURL')
+                ->select('tourId', 'imageUrl')
                 ->orderBy('imageId')
                 ->get()
                 ->groupBy('tourId');
 
             $tours = $tours->map(function ($tour) use ($imageList) {
                 $tour->images = isset($imageList[$tour->tourId])
-                    ? $imageList[$tour->tourId]->pluck('imageURL')->toArray()
+                    ? $imageList[$tour->tourId]->pluck('imageUrl')->toArray()
                     : [];
-
                 return $tour;
             });
         }
@@ -277,23 +385,21 @@ class SearchController extends Controller
         // Gắn rating giống trang home
         $toursModel = new Tours();
         foreach ($tours as $tour) {
-            $stats = $toursModel->reviewStats($tour->tourId);
+            $stats        = $toursModel->reviewStats($tour->tourId);
             $tour->rating = $stats->averageRating ?? 0;
         }
     }
 
-    // *** QUAN TRỌNG: truyền $title cho view ***
-    $title = 'Khám phá tour du lịch gần bạn';
+    $title = 'Khám phá tour gần điểm bạn chọn';
 
-    return view('clients.search', [
-        'title'    => $title,   // <- thêm dòng này
-        'tours'    => $tours,
-        'lat'      => $lat,
-        'lng'      => $lng,
-        'keyword'  => $keyword,
-        'startDate'=> $startDate,
-        'endDate'  => $endDate,
-        'isNearby' => true,     // flag báo là search theo bản đồ
+    return view('clients.nearby_tours', [
+        'title'     => $title,
+        'tours'     => $tours,
+        'startLat'  => $startLat,
+        'startLng'  => $startLng,
+        'endLat'    => $endLat,
+        'endLng'    => $endLng,
+        'isNearby'  => true,
     ]);
 }
 

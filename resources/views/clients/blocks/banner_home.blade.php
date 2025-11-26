@@ -7,8 +7,8 @@
             style="background-image: url({{ asset('clients/assets/images/hero/hero.jpg') }});">
         </div>
     </div>
-    <form action="{{ route('search') }}" method="GET" id="search_form">
 
+    <form action="{{ route('search') }}" method="GET" id="search_form">
         <div class="container container-1400">
             <div class="search-filter-inner" data-aos="zoom-out-down" data-aos-duration="1400" data-aos-offset="50">
 
@@ -29,8 +29,11 @@
                             Chọn trên bản đồ
                         </button>
 
-                        <input type="hidden" name="lat" id="search_lat">
-                        <input type="hidden" name="lng" id="search_lng">
+                        {{-- hidden dùng cho nearby tours --}}
+                        <input type="hidden" name="start_lat" id="search_start_lat">
+                        <input type="hidden" name="start_lng" id="search_start_lng">
+                        <input type="hidden" name="end_lat" id="search_end_lat">
+                        <input type="hidden" name="end_lng" id="search_end_lng">
                     </div>
                 </div>
 
@@ -61,6 +64,8 @@
             </div>
         </div>
     </form>
+
+    {{-- Autocomplete + lịch sử tìm kiếm --}}
     <script>
         document.addEventListener('DOMContentLoaded', function () {
             const input = document.getElementById('destination');
@@ -95,17 +100,10 @@
                 if (!key) return;
 
                 let history = getHistory();
-
-                // Xoá trùng (so sánh không phân biệt hoa thường)
                 const lower = key.toLowerCase();
                 history = history.filter(item => item.toLowerCase() !== lower);
-
-                // Cho từ khoá mới lên đầu
                 history.unshift(key);
-
-                // Giữ tối đa 5 cái gần nhất
                 history = history.slice(0, 5);
-
                 localStorage.setItem(HISTORY_KEY, JSON.stringify(history));
             }
 
@@ -122,13 +120,12 @@
                 box.style.display = 'none';
             }
 
-            // ===== DROPDOWN MẶC ĐỊNH (khi chưa gõ gì) =====
+            // ===== DROPDOWN MẶC ĐỊNH =====
             function renderDefaultDropdown() {
                 box.innerHTML = '';
 
                 const history = getHistory();
 
-                // --- LỊCH SỬ TÌM KIẾM (tối đa 5 cái) ---
                 if (history.length > 0) {
                     const titleH = document.createElement('div');
                     titleH.className = 'suggest-section-title';
@@ -139,9 +136,9 @@
                         const item = document.createElement('div');
                         item.className = 'suggest-item suggest-history';
                         item.innerHTML = `
-                    <div class="suggest-icon"><i class="fal fa-clock"></i></div>
-                    <div class="suggest-name">${term}</div>
-                `;
+                            <div class="suggest-icon"><i class="fal fa-clock"></i></div>
+                            <div class="suggest-name">${term}</div>
+                        `;
                         item.addEventListener('click', function () {
                             input.value = term;
                             hideBox();
@@ -151,7 +148,6 @@
                     });
                 }
 
-                // --- ĐIỂM ĐẾN GỢI Ý ---
                 const titleD = document.createElement('div');
                 titleD.className = 'suggest-section-title';
                 titleD.textContent = 'Điểm đến';
@@ -161,9 +157,9 @@
                     const item = document.createElement('div');
                     item.className = 'suggest-item';
                     item.innerHTML = `
-                <div class="suggest-icon"><i class="fal fa-map-marker-alt"></i></div>
-                <div class="suggest-name">${place.label}</div>
-            `;
+                        <div class="suggest-icon"><i class="fal fa-map-marker-alt"></i></div>
+                        <div class="suggest-name">${place.label}</div>
+                    `;
                     item.addEventListener('click', function () {
                         input.value = place.value;
                         hideBox();
@@ -208,9 +204,9 @@
                     const item = document.createElement('div');
                     item.className = 'suggest-item';
                     item.innerHTML = `
-                <div class="suggest-icon"><i class="fal fa-map-marker-alt"></i></div>
-                <div class="suggest-name">${place.label}</div>
-            `;
+                        <div class="suggest-icon"><i class="fal fa-map-marker-alt"></i></div>
+                        <div class="suggest-name">${place.label}</div>
+                    `;
                     item.addEventListener('click', function () {
                         input.value = place.value;
                         hideBox();
@@ -253,18 +249,277 @@
                 }
             });
 
-            // Lưu lịch sử khi submit bằng nút "Tìm kiếm"
             form.addEventListener('submit', function () {
                 const kw = input.value.trim();
                 if (kw) saveHistory(kw);
             });
 
-            // Ẩn box khi blur (delay chút để click được item)
             input.addEventListener('blur', function () {
                 setTimeout(hideBox, 150);
             });
         });
     </script>
-
 </section>
 <!-- Hero Area End -->
+
+{{-- Leaflet CSS/JS cho popup map --}}
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+{{-- POPUP MAP chọn 2 điểm --}}
+<style>
+    .map-modal-backdrop {
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, .6);
+        display: none;
+        justify-content: center;
+        align-items: center;
+        z-index: 9999;
+    }
+
+    .map-modal {
+        background: #111319;
+        border-radius: 16px;
+        width: 90%;
+        max-width: 900px;
+        padding: 18px 20px 16px;
+        color: #fff;
+        box-shadow: 0 20px 60px rgba(0, 0, 0, .7);
+    }
+
+    #map-popup {
+        width: 100%;
+        height: 420px;
+        border-radius: 12px;
+        overflow: hidden;
+        margin-top: 8px;
+    }
+
+    .map-modal-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .map-modal-footer {
+        margin-top: 12px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        font-size: 13px;
+    }
+
+    .btn-map {
+        border-radius: 999px;
+        padding: 8px 16px;
+        border: none;
+        cursor: pointer;
+        font-size: 13px;
+        font-weight: 600;
+    }
+
+    .btn-map-confirm {
+        background: linear-gradient(90deg, #4caf50, #81c784);
+        color: #000;
+    }
+
+    .btn-map-cancel {
+        background: transparent;
+        color: #ddd;
+    }
+</style>
+
+<div class="map-modal-backdrop" id="map-modal-backdrop">
+    <div class="map-modal">
+        <div class="map-modal-header">
+            <h4 style="margin:0; font-size:18px;">Chọn vị trí trên bản đồ</h4>
+            <button type="button" class="btn-map btn-map-cancel" id="close-map-btn">
+                Đóng
+            </button>
+        </div>
+
+        <div style="margin-top:6px; font-size:13px; color:#ccc;">
+            Click lần 1 để chọn <strong>điểm khởi hành</strong> (marker xanh).
+            Click lần 2 để chọn <strong>điểm kết thúc</strong> (marker đỏ).
+            Click lần 3 để reset chọn lại.
+        </div>
+
+        <div id="map-popup"></div>
+
+        <div class="map-modal-footer">
+            <div style="line-height:1.6">
+                <div>
+                    <strong>Điểm khởi hành:</strong>
+                    lat: <span id="popup-start-lat">chưa chọn</span> |
+                    lng: <span id="popup-start-lng">chưa chọn</span>
+                </div>
+                <div>
+                    <strong>Điểm kết thúc:</strong>
+                    lat: <span id="popup-end-lat">chưa chọn</span> |
+                    lng: <span id="popup-end-lng">chưa chọn</span>
+                </div>
+            </div>
+            <button type="button" class="btn-map btn-map-confirm" id="confirm-map-btn">
+                Xác nhận vị trí
+            </button>
+        </div>
+    </div>
+</div>
+
+<script>
+    const modalBackdrop = document.getElementById('map-modal-backdrop');
+    const openMapBtn = document.getElementById('open-map-btn');
+    const closeMapBtn = document.getElementById('close-map-btn');
+    const confirmMapBtn = document.getElementById('confirm-map-btn');
+
+    const startLatText = document.getElementById('popup-start-lat');
+    const startLngText = document.getElementById('popup-start-lng');
+    const endLatText = document.getElementById('popup-end-lat');
+    const endLngText = document.getElementById('popup-end-lng');
+
+    const startLatInput = document.getElementById('search_start_lat');
+    const startLngInput = document.getElementById('search_start_lng');
+    const endLatInput = document.getElementById('search_end_lat');
+    const endLngInput = document.getElementById('search_end_lng');
+
+    const destinationInput = document.getElementById('destination');
+    const searchFormMap = document.getElementById('search_form');
+
+    const originalAction = "{{ route('search') }}";
+    const nearbyAction = "{{ route('nearby.tours') }}";
+
+    let map, mapInited = false;
+    let startMarker = null;
+    let endMarker = null;
+    let clickStep = 0;
+
+    const defaultLat = 15.9;
+    const defaultLng = 105.8;
+
+    const redIcon = new L.Icon({
+        iconUrl: "https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-red.png",
+        shadowUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
+        iconSize: [25, 41],
+        iconAnchor: [12, 41],
+        popupAnchor: [1, -34],
+        shadowSize: [41, 41]
+    });
+
+    const greenIcon = new L.Icon.Default();
+
+    // mở popup
+    openMapBtn.addEventListener('click', function () {
+        modalBackdrop.style.display = 'flex';
+
+        if (!mapInited) {
+            map = L.map('map-popup', {
+                center: [defaultLat, defaultLng],
+                zoom: 6,
+                zoomControl: true,
+                scrollWheelZoom: true,
+                dragging: true,
+            });
+
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                maxZoom: 19
+            }).addTo(map);
+
+            map.on('click', function (e) {
+                const lat = e.latlng.lat.toFixed(7);
+                const lng = e.latlng.lng.toFixed(7);
+
+                if (clickStep === 0) {
+                    if (startMarker) map.removeLayer(startMarker);
+
+                    startMarker = L.marker([lat, lng], { icon: greenIcon })
+                        .addTo(map)
+                        .bindPopup("Điểm khởi hành")
+                        .openPopup();
+
+                    startLatText.textContent = lat;
+                    startLngText.textContent = lng;
+                    startLatInput.value = lat;
+                    startLngInput.value = lng;
+
+                    clickStep = 1;
+                    return;
+                }
+
+                if (clickStep === 1) {
+                    if (endMarker) map.removeLayer(endMarker);
+
+                    endMarker = L.marker([lat, lng], { icon: redIcon })
+                        .addTo(map)
+                        .bindPopup("Điểm kết thúc")
+                        .openPopup();
+
+                    endLatText.textContent = lat;
+                    endLngText.textContent = lng;
+                    endLatInput.value = lat;
+                    endLngInput.value = lng;
+
+                    clickStep = 2;
+                    return;
+                }
+
+                // click lần 3 -> reset
+                if (startMarker) map.removeLayer(startMarker);
+                if (endMarker) map.removeLayer(endMarker);
+                startMarker = null;
+                endMarker = null;
+                clickStep = 0;
+
+                startLatText.textContent = 'chưa chọn';
+                startLngText.textContent = 'chưa chọn';
+                endLatText.textContent = 'chưa chọn';
+                endLngText.textContent = 'chưa chọn';
+
+                startLatInput.value = '';
+                startLngInput.value = '';
+                endLatInput.value = '';
+                endLngInput.value = '';
+
+                map.fire('click', e);
+            });
+
+            mapInited = true;
+        }
+
+        setTimeout(() => { map.invalidateSize(); }, 200);
+    });
+
+    function closeModal() {
+        modalBackdrop.style.display = 'none';
+    }
+    closeMapBtn.addEventListener('click', closeModal);
+    modalBackdrop.addEventListener('click', function (e) {
+        if (e.target === modalBackdrop) closeModal();
+    });
+
+    confirmMapBtn.addEventListener('click', function () {
+        if (!startLatInput.value || !startLngInput.value) {
+            alert('Bạn chưa chọn điểm khởi hành.');
+            return;
+        }
+
+        if (endLatInput.value && endLngInput.value) {
+            destinationInput.value = 'Đã chọn 2 điểm trên bản đồ';
+        } else {
+            destinationInput.value = 'Đã chọn 1 điểm trên bản đồ';
+        }
+
+        closeModal();
+    });
+
+    // đổi action form khi có dùng bản đồ
+    searchFormMap.addEventListener('submit', function () {
+        const hasStart = startLatInput.value !== '' && startLngInput.value !== '';
+
+        if (hasStart) {
+            searchFormMap.action = nearbyAction;
+        } else {
+            searchFormMap.action = originalAction;
+        }
+    });
+</script>

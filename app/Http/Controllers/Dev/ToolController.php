@@ -28,7 +28,7 @@ class ToolController extends Controller
             $totalUpdated += $affected;
             $log[] = "Từ khóa '{$keyword}' → $affected tour";
         }
-
+        
         return response()->json([
             'message' => 'Đã cập nhật tọa độ cho tour xong.',
             'total_updated' => $totalUpdated,

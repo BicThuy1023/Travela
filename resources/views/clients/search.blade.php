@@ -6,10 +6,18 @@
 
         {{-- Container kết quả --}}
         <div id="search-results" class="row">
-            @if(isset($tours) && $tours->count())
+            {{--
+            Với trang search thường (/search):
+            - Không render kết quả bằng Blade
+            - Kết quả sẽ được JS fetch từ /api/search-tours-js và đổ vào đây
+            --}}
+            @if(isset($isNearby) && $isNearby && isset($tours) && $tours->count())
                 @foreach($tours as $tour)
                     <div class="col-xl-4 col-md-6 mb-4">
-                        <div class="destination-item tour-grid style-three bgc-lighter equal-block-fix">
+                        <div class="destination-item tour-grid style-three bgc-lighter equal-block-fix"
+                            data-start-lat="{{ $tour->location_lat }}" data-start-lng="{{ $tour->location_lng }}"
+                            data-end-lat="{{ $tour->end_lat }}" data-end-lng="{{ $tour->end_lng }}">
+
                             <div class="image">
                                 <a href="#" class="heart"><i class="fas fa-heart"></i></a>
                                 <img src="{{ asset('admin/assets/images/gallery-tours/' . ($tour->images[0] ?? 'no-image.jpg')) }}"
@@ -41,40 +49,36 @@
                                 </h5>
 
                                 <ul class="blog-meta">
-                                    <li><i class="far fa-clock"></i> {{ $tour->time }}</li>
-                                    <li><i class="far fa-user"></i> {{ $tour->quantity }}</li>
+                                    <li>
+                                        <i class="far fa-clock"></i> {{ $tour->time }}
+                                    </li>
+                                    <li>
+                                        <i class="far fa-user"></i> {{ $tour->quantity }}
+                                    </li>
 
-                                    {{-- nếu là nearby thì show thêm khoảng cách --}}
-                                    @if(isset($isNearby) && $isNearby)
-                                        <li><i class="far fa-map"></i> {{ number_format($tour->distance ?? 0, 2) }} km</li>
+                                    @if(isset($tour->start_distance))
+                                        <li>
+                                            <i class="far fa-map"></i>
+                                            {{ number_format($tour->start_distance, 1) }} km
+                                        </li>
                                     @endif
-                                </ul>
 
-                                <div class="destination-footer">
-                                    <span class="price">
-                                        <span>{{ number_format($tour->priceAdult, 0, ',', '.') }}</span> VND / người
-                                    </span>
-                                    <a href="{{ url('/tour-detail/' . $tour->tourId) }}"
-                                        class="theme-btn style-two style-three">
-                                        <span data-hover="Đặt ngay">Đặt ngay</span>
-                                        <i class="fal fa-arrow-right"></i>
-                                    </a>
-                                </div>
+                                    <div class="destination-footer">
+                                        <span class="price">
+                                            <span>{{ number_format($tour->priceAdult, 0, ',', '.') }}</span> VND / người
+                                        </span>
+                                        <a href="{{ url('/tour-detail/' . $tour->tourId) }}"
+                                            class="theme-btn style-two style-three">
+                                            <span data-hover="Đặt ngay">Đặt ngay</span>
+                                            <i class="fal fa-arrow-right"></i>
+                                        </a>
+                                    </div>
                             </div>
                         </div>
                     </div>
                 @endforeach
-
-                {{-- ✅ THÊM THÔNG BÁO NẾU NEARBY MÀ RỖNG --}}
-            @elseif(isset($isNearby) && $isNearby)
-                <div class="col-12">
-                    <div class="alert alert-warning">
-                        Không tìm thấy tour nào gần vị trí bạn chọn. Hãy thử chọn vị trí khác để tìm kiếm.
-                    </div>
-                </div>
             @endif
         </div>
-
 
         {{-- Thông báo loading --}}
         <div id="loading" class="text-center text-white mt-4" style="display:none;">
@@ -100,14 +104,33 @@
             const resultsContainer = document.getElementById('search-results');
             const loadingDiv = document.getElementById('loading');
 
+            // Từ PHP (form search)
             const keyword = "{{ $keyword ?? '' }}";
             const startDate = "{{ $startDate ?? '' }}";
             const endDate = "{{ $endDate ?? '' }}";
 
+            // 🔥 Lấy thêm toạ độ start/end từ URL (khi đi từ popup map, v.v.)
+            const urlParams = new URLSearchParams(window.location.search);
+            const startLat = urlParams.get('start_lat');
+            const startLng = urlParams.get('start_lng');
+            const endLat = urlParams.get('end_lat');
+            const endLng = urlParams.get('end_lng');
+
             const params = new URLSearchParams();
+
             if (keyword) params.append('keyword', keyword);
             if (startDate) params.append('start_date', startDate);
             if (endDate) params.append('end_date', endDate);
+
+            // 🔥 Gửi thêm 4 tham số route nếu có đủ
+            if (startLat && startLng && endLat && endLng) {
+                params.append('start_lat', startLat);
+                params.append('start_lng', startLng);
+                params.append('end_lat', endLat);
+                params.append('end_lng', endLng);
+            }
+
+            console.log('Params gửi lên API:', params.toString());
 
             loadingDiv.style.display = 'block';
 
@@ -120,7 +143,7 @@
                     if (!json.success || !json.data || json.data.length === 0) {
                         resultsContainer.innerHTML = `
                             <h4 class="alert alert-danger">
-                                Không tìm thấy tour phù hợp với từ khóa "{{ $keyword }}".
+                                Không tìm thấy tour phù hợp với yêu cầu hiện tại.
                             </h4>
                         `;
                         return;
@@ -144,7 +167,7 @@
                             ? Number(tour.priceAdult).toLocaleString('vi-VN')
                             : '';
 
-                        // ⭐ 
+                        // ⭐ rating
                         let ratingHtml = '';
                         const rating = Math.round(Number(tour.rating || 0));
                         for (let i = 0; i < 5; i++) {
@@ -155,8 +178,17 @@
                             }
                         }
 
+                        const startLatVal = tour.location_lat ?? '';
+                        const startLngVal = tour.location_lng ?? '';
+                        const endLatVal = tour.end_lat ?? '';
+                        const endLngVal = tour.end_lng ?? '';
+
                         col.innerHTML = `
-                            <div class="destination-item tour-grid style-three bgc-lighter equal-block-fix">
+                            <div class="destination-item tour-grid style-three bgc-lighter equal-block-fix"
+                                 data-start-lat="${startLatVal}"
+                                 data-start-lng="${startLngVal}"
+                                 data-end-lat="${endLatVal}"
+                                 data-end-lng="${endLngVal}">
                                 <div class="image">
                                     <a href="#" class="heart"><i class="fas fa-heart"></i></a>
                                     <img src="${imageSrc}" alt="Tour">
