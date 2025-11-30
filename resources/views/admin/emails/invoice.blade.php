@@ -1,5 +1,6 @@
 <p style="font-size: 16px; font-family: Arial, sans-serif; color: #333;">Chào {{ $invoice_booking->fullName }},</p>
-<p style="font-size: 16px; font-family: Arial, sans-serif; color: #333;">Cảm ơn bạn đã đặt tour tại Mỹ Mỹ Travel. Vui lòng xem chi tiết hóa đơn trong file đính kèm.</p>
+<p style="font-size: 16px; font-family: Arial, sans-serif; color: #333;">Cảm ơn bạn đã đặt tour tại Asia Travel. Vui
+    lòng xem chi tiết hóa đơn trong file đính kèm.</p>
 <p style="font-size: 16px; font-family: Arial, sans-serif; color: #333;">Chúc bạn một chuyến đi vui vẻ!</p>
 
 <div class="invoice_booking" style="border: 1px solid #ddd; padding: 20px; background-color: #f9f9f9;">
@@ -12,9 +13,11 @@
             <div class="row" style="margin-bottom: 20px;">
                 <div class="invoice-header">
                     <h3 style="font-size: 20px; font-weight: bold;">
-                        <img src="{{ asset('admin/assets/images/icon/icon_office.png') }}" alt="" style="margin-right: 10px; vertical-align: middle;">
+                        <img src="{{ asset('admin/assets/images/icon/icon_office.png') }}" alt=""
+                            style="margin-right: 10px; vertical-align: middle;">
                         {{ $invoice_booking->title }}
-                        <small style="float: right; font-size: 14px;">Ngày: {{ date('d-m-Y', strtotime($invoice_booking->bookingDate)) }}</small>
+                        <small style="float: right; font-size: 14px;">Ngày:
+                            {{ date('d-m-Y', strtotime($invoice_booking->bookingDate)) }}</small>
                     </h3>
                 </div>
             </div>
@@ -33,11 +36,11 @@
                 <div class="col-sm-4 invoice-col" style="font-size: 14px;">
                     Đến
                     <address>
-                        <strong>Công ty Mỹ Mỹ Travel</strong><br>
+                        <strong>Công ty Asia Travel</strong><br>
                         470 Trần Đại Nghĩa<br>
                         Bình Dương<br>
                         Phone: 1 (804) 123-9876<br>
-                        Email: dothanhlong3703@gmail.com
+                        Email: ttbthuy892@gmail.com
                     </address>
                 </div>
                 <br>
@@ -66,16 +69,24 @@
                             <tr style="border-bottom: 1px solid #ddd;">
                                 <td style="padding: 8px;">Người lớn</td>
                                 <td style="padding: 8px;">{{ $invoice_booking->numAdults }}</td>
-                                <td style="padding: 8px;">{{ number_format($invoice_booking->priceAdult, 0, ',', '.') }} vnđ</td>
+                                <td style="padding: 8px;">{{ number_format($invoice_booking->priceAdult, 0, ',', '.') }}
+                                    vnđ</td>
                                 <td style="padding: 8px;">{{ $invoice_booking->destination }}</td>
-                                <td style="padding: 8px;">{{ number_format($invoice_booking->priceAdult * $invoice_booking->numAdults, 0, ',', '.') }} vnđ</td>
+                                <td style="padding: 8px;">
+                                    {{ number_format($invoice_booking->priceAdult * $invoice_booking->numAdults, 0, ',', '.') }}
+                                    vnđ
+                                </td>
                             </tr>
                             <tr style="border-bottom: 1px solid #ddd;">
                                 <td style="padding: 8px;">Trẻ em</td>
                                 <td style="padding: 8px;">{{ $invoice_booking->numChildren }}</td>
-                                <td style="padding: 8px;">{{ number_format($invoice_booking->priceChild, 0, ',', '.') }} vnđ</td>
+                                <td style="padding: 8px;">{{ number_format($invoice_booking->priceChild, 0, ',', '.') }}
+                                    vnđ</td>
                                 <td style="padding: 8px;">{{ $invoice_booking->destination }}</td>
-                                <td style="padding: 8px;">{{ number_format($invoice_booking->priceChild * $invoice_booking->numChildren, 0, ',', '.') }} vnđ</td>
+                                <td style="padding: 8px;">
+                                    {{ number_format($invoice_booking->priceChild * $invoice_booking->numChildren, 0, ',', '.') }}
+                                    vnđ
+                                </td>
                             </tr>
                         </tbody>
                     </table>
@@ -87,22 +98,27 @@
                 <div class="col-md-6">
                     <p style="font-size: 16px; font-weight: bold;">Phương thức thanh toán:</p>
                     @if ($invoice_booking->paymentMethod == 'momo-payment')
-                    <h1 style="color: red; font-weight: bold;">Thanh toán tại Momo</h1>
+                        <h1 style="color: red; font-weight: bold;">Thanh toán tại Momo</h1>
                     @elseif ($invoice_booking->paymentMethod == 'paypal-payment')
-                    <h1 style="color: red; font-weight: bold;">Thanh toán tại Paypal</h1>
+                        <h1 style="color: red; font-weight: bold;">Thanh toán tại Paypal</h1>
                     @else
-                    <h1 style="color: red; font-weight: bold;">Thanh toán tại văn phòng</h1>
+                        <h1 style="color: red; font-weight: bold;">Thanh toán tại văn phòng</h1>
                     @endif
-                    <p style="font-size: 14px; color: #555; margin-top: 10px;">Vui lòng hoàn tất thanh toán theo hướng dẫn hoặc liên hệ với chúng tôi nếu cần hỗ trợ.</p>
+                    <p style="font-size: 14px; color: #555; margin-top: 10px;">Vui lòng hoàn tất thanh toán theo hướng
+                        dẫn hoặc liên hệ với chúng tôi nếu cần hỗ trợ.</p>
                 </div>
                 <div class="col-md-6">
-                    <p style="font-size: 16px; font-weight: bold;">Số tiền phải trả trước {{ date('d-m-Y', strtotime($invoice_booking->startDate)) }}</p>
+                    <p style="font-size: 16px; font-weight: bold;">Số tiền phải trả trước
+                        {{ date('d-m-Y', strtotime($invoice_booking->startDate)) }}
+                    </p>
                     <div class="table-responsive">
                         <table class="table" style="width: 100%; border-collapse: collapse;">
                             <tbody>
                                 <tr>
                                     <th style="width: 50%; padding: 8px; text-align: left;">Tổng tiền:</th>
-                                    <td style="padding: 8px;">{{ number_format($invoice_booking->totalPrice, 0, ',', '.') }} vnđ</td>
+                                    <td style="padding: 8px;">
+                                        {{ number_format($invoice_booking->totalPrice, 0, ',', '.') }} vnđ
+                                    </td>
                                 </tr>
                                 <tr>
                                     <th style="padding: 8px; text-align: left;">Tax (0%)</th>
@@ -114,7 +130,9 @@
                                 </tr>
                                 <tr>
                                     <th style="padding: 8px; text-align: left;">Tổng tiền:</th>
-                                    <td style="padding: 8px; color: red">{{ number_format($invoice_booking->amount, 0, ',', '.') }} vnđ</td>
+                                    <td style="padding: 8px; color: red">
+                                        {{ number_format($invoice_booking->amount, 0, ',', '.') }} vnđ
+                                    </td>
                                 </tr>
                             </tbody>
                         </table>

@@ -1,0 +1,712 @@
+/* ===========================
+    BUILD TOUR PAGE - UPDATED CSS
+    =========================== */
+
+/* Khung trắng ôm toàn bộ form */
+.build-tour-wrapper {
+    max-width: 1000px;
+    margin: 40px auto 80px;
+    background: #ffffff;
+    border-radius: 20px;
+    padding: 40px 48px;
+    /* Tăng cường đổ bóng hiện đại và có chiều sâu hơn */
+    box-shadow: 0 10px 40px rgba(15, 23, 42, 0.05),
+                0 30px 80px rgba(22, 163, 74, 0.1);
+}
+
+/* Tiêu đề */
+.build-tour-header {
+    margin-bottom: 28px;
+    text-align: center;
+}
+
+.build-tour-header h2 {
+    font-size: 32px;
+    font-weight: 700;
+    margin-bottom: 8px;
+    color: #090f0b;
+}
+
+.build-tour-header p {
+    margin-bottom: 0;
+    color: #64748b;
+    font-size: 15px;
+}
+
+/* ========= STEP INDICATOR ========= */
+
+.steps-indicator {
+    display: flex !important;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 30px;
+}
+
+.step-item {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 14px;
+    border-radius: 14px;
+    background: #f1f5f9;
+    border: 1px solid transparent;
+    opacity: 0.9;
+    transition: 0.2s ease;
+}
+
+.step-item.active {
+    background: #e7f7e9; /* Light, calming green, dịu hơn #dcfce7 */
+    border-color: #38a169; /* Slightly darker border for definition */
+    opacity: 1;
+}
+
+.step-item.disabled {
+    opacity: 0.6;
+}
+
+.step-index {
+    min-width: 28px;
+    height: 28px;
+    border-radius: 999px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #38a169; /* Consistent primary green */
+    color: #fff;
+    font-size: 14px;
+    font-weight: 600;
+}
+
+.step-item.disabled .step-index {
+    background: #e5e7eb;
+    color: #6b7280;
+}
+
+.step-text strong {
+    font-size: 13px;
+    color: #0f172a;
+    display: block;
+}
+
+.step-text small {
+    font-size: 11px;
+    color: #6b7280;
+    display: block;
+}
+
+/* ========= FORM CƠ BẢN ========= */
+
+.build-tour-form {
+    margin-top: 6px;
+}
+
+.build-tour-form .form-label {
+    font-weight: 600;
+    margin-bottom: 6px;
+    font-size: 14px;
+    color: #111827;
+}
+
+.build-tour-form .form-text {
+    font-size: 12px;
+    color: #9ca3af;
+    margin-top: 3px;
+}
+
+.build-tour-form .form-control,
+.build-tour-form .form-select {
+    border-radius: 10px;
+    border: 1px solid #d1d5db;
+    font-size: 14px;
+    padding: 9px 12px;
+}
+
+.build-tour-form .form-control:focus,
+.build-tour-form .form-select:focus {
+    border-color: #16a34a;
+    box-shadow: 0 0 0 2px rgba(22, 163, 74, 0.25);
+}
+
+/* ========= Ô tìm kiếm điểm đến ========= */
+
+.destination-select {
+    position: relative;
+}
+
+.destination-search-input {
+    position: relative;
+}
+
+.destination-search-input input {
+    width: 100%;
+    border-radius: 999px;
+    padding-right: 36px;
+}
+
+.destination-search-input i {
+    position: absolute;
+    right: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #9ca3af;
+    font-size: 14px;
+}
+
+/* ========= Gợi ý dropdown (kiểu nhỏ như ảnh 2) ========= */
+
+.destination-suggestions {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    margin-top: 6px;
+    background: #ffffff;
+    border-radius: 14px;
+    box-shadow: 0 10px 30px rgba(15, 23, 42, 0.08);
+    max-height: 260px;
+    overflow-y: auto;
+    z-index: 40;
+    display: none;
+    border: 1px solid #e5e7eb;
+    padding: 4px 0;
+}
+
+.destination-suggestions.active {
+    display: block;
+}
+
+.destination-suggestion-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 14px;
+    font-size: 13px;
+    cursor: pointer;
+}
+
+.destination-suggestion-item:hover {
+    background: #f3f4f6;
+}
+
+/* icon tròn giống list nhỏ điểm đến */
+.destination-suggestion-icon {
+    width: 28px;
+    height: 28px;
+    border-radius: 999px;
+    background: #fef3c7;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.destination-suggestion-icon i {
+    font-size: 13px;
+    color: #f97316;
+}
+
+.destination-suggestion-content {
+    flex: 1;
+    min-width: 0;
+}
+
+.destination-suggestion-name {
+    font-weight: 500;
+    color: #111827;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* ========= Chip điểm đến đã chọn ========= */
+
+.selected-destinations {
+    margin-top: 10px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.selected-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px; /* Tăng khoảng cách */
+    padding: 7px 12px; /* Tăng kích thước padding */
+    border-radius: 999px;
+    background: #dcfce7;
+    color: #14532d;
+    font-size: 13px; /* Tăng cỡ chữ */
+    font-weight: 600; /* In đậm chữ */
+}
+
+.selected-chip button {
+    border: none;
+    background: transparent;
+    font-size: 16px; /* Tăng cỡ nút X */
+    line-height: 1;
+    cursor: pointer;
+    color: #166534;
+}
+
+/* ========= Các điểm bắt buộc (Toggle Button) ========= */
+
+.must-visit-wrapper {
+    border-radius: 14px;
+    border: 1px dashed #bbf7d0;
+    background: #f0fdf4;
+    padding: 14px 16px;
+    margin-top: 6px;
+    max-height: 300px;
+    overflow-y: auto;
+}
+
+.must-visit-wrapper.has-error {
+    border-color: #fecaca;
+    background: #fef2f2;
+}
+
+.must-visit-title {
+    font-weight: 600;
+    font-size: 13px;
+    margin-bottom: 6px;
+    color: #14532d;
+}
+
+.must-visit-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px; /* Tăng khoảng cách giữa các nút */
+}
+
+/* Thiết lập lại must-visit-item để style input/span như nút */
+.must-visit-item {
+    font-size: 13px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 0;
+    border: none;
+    cursor: pointer;
+}
+
+.must-visit-item input[type="checkbox"] {
+    display: none; /* Ẩn checkbox mặc định */
+}
+
+.must-visit-item span {
+    display: inline-block;
+    padding: 8px 16px;
+    border-radius: 999px;
+    border: 1px solid #d1d5db;
+    background: #ffffff;
+    transition: 0.2s ease;
+}
+
+/* Style khi được chọn */
+.must-visit-item input:checked + span {
+    background: #38a169;
+    color: #fff;
+    border-color: #38a169;
+    font-weight: 600;
+    box-shadow: 0 2px 4px rgba(56, 161, 105, 0.2);
+}
+
+/* ========= Footer ========= */
+
+.build-tour-footer {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    margin-top: 2px;
+    padding-top: 18px;
+    border-top: 1px dashed #e2e8f0;
+}
+
+.build-tour-footer .small {
+    font-size: 12px;
+    color: #6b7280;
+}
+
+/* Nút Step 1 – màu mặc định */
+.btn-build-tour {
+    border-radius: 999px;
+    padding: 10px 26px;
+    font-weight: 600;
+    font-size: 14px;
+    border: none;
+    background: #63AB45;
+    color: #fff;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    transition: 0.25s ease-in-out;
+}
+
+/* Màu hover */
+.btn-build-tour:hover {
+    background: #F7921E !important;
+    transform: translateY(-2px);
+}
+
+/* Icon trong nút trắng */
+.btn-build-tour i {
+    font-size: 14px;
+    color: #fff;
+}
+
+/* ========= Lỗi field ========= */
+
+.form-control.is-invalid {
+    border-color: #dc2626;
+    box-shadow: 0 0 0 1px rgba(220, 38, 38, 0.15);
+}
+
+.field-error-msg {
+    font-size: 12px;
+    color: #dc2626;
+    margin-top: 4px;
+}
+
+/* ========= Responsive ========= */
+
+@media (max-width: 991.98px) {
+    .build-tour-wrapper {
+        max-width: 100%;
+        margin: 20px auto 60px;
+        padding: 24px 18px;
+        border-radius: 0;
+    }
+
+    .steps-indicator {
+        flex-direction: column;
+    }
+}
+
+/* ==== Slider ngân sách ==== */
+.budget-range-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.budget-range-wrapper input[type="range"] {
+    flex: 1;
+}
+
+.budget-value {
+    min-width: 110px;
+    text-align: right;
+    font-weight: 600;
+    font-size: 14px;
+    color: #14532d;
+}
+
+/* ==== Ô số lượng khách  ==== */
+.guest-input-pill {
+    border-radius: 999px;
+    border: 1px solid #e5e7eb;
+    background: #ffffff;
+    padding: 8px 14px;
+    display: flex;
+    align-items: center;
+    transition: 0.2s ease;
+}
+
+.guest-input-pill:focus-within {
+    border-color: #16a34a;
+    box-shadow: 0 0 0 2px rgba(22, 163, 74, 0.16);
+}
+
+.guest-input-field {
+    border: none;
+    outline: none;
+    width: 100%;
+    font-size: 14px;
+    color: #111827;
+    background: transparent;
+    padding: 0;
+}
+
+/* Ẩn nút tăng giảm mặc định  */
+.guest-input-field::-webkit-outer-spin-button,
+.guest-input-field::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
+.guest-input-field[type="number"] {
+    appearance: textfield;       /* chuẩn */
+    -moz-appearance: textfield;  /* Firefox */
+}
+
+/* ==== Chip-group cho Sở thích / Mức khách sạn / Cường độ  ==== */
+.chip-group {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+/* label bao chip */
+.chip-item {
+    display: inline-flex;
+    align-items: center;
+    border-radius: 999px;
+    cursor: pointer;
+    background: transparent;
+    border: none;          /* border sẽ đặt ở span bên trong */
+    padding: 0;            /* padding cũng đặt ở span */
+    user-select: none;
+    transition: 0.18s ease;
+}
+
+.chip-item input {
+    display: none;
+}
+
+/* phần hiển thị của chip */
+.chip-item span {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 46px;                 /* CHIỀU CAO CỐ ĐỊNH */
+    padding: 0 18px;              /* padding cố định */
+    border-radius: 999px;
+    border: 1px solid #e5e7eb;
+    font-size: 13px;
+    color: #111827;
+    white-space: nowrap;
+    background: #ffffff;
+    transition: 0.18s ease;
+}
+
+/* Trạng thái được chọn – chỉ đổi màu, không đổi kích thước */
+.chip-item.active span,
+.chip-item input:checked + span {
+    background: #e0f7e5;
+    border-color: #16a34a;
+    color: #14532d;
+    font-weight: 600;
+}
+
+/* Hover */
+.chip-item:hover span {
+    border-color: #16a34a;
+}
+
+/* ======= INTEREST CHECKBOX PILL ======== */
+.interest-wrapper {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px 14px;
+}
+
+.interest-pill {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 16px;
+    border: 1px solid #e5e7eb;
+    background: #fff;
+    border-radius: 999px;
+    cursor: pointer;
+    font-size: 14px;
+    transition: 0.2s ease;
+    user-select: none;
+}
+
+.interest-pill:hover {
+    border-color: #22c55e;
+}
+
+.interest-pill input {
+    width: 16px;
+    height: 16px;
+}
+
+.interest-pill input:checked + span {
+    font-weight: 600;
+    color: #14532d;
+}
+
+.interest-pill input:checked {
+    accent-color: #22c55e;
+}
+
+/* ============================
+   STEP 3 - RESULT PAGE (NEW)
+   ============================ */
+
+/* Section title */
+.section-title {
+    font-size: 22px;
+    font-weight: 700;
+    color: #111827;
+    margin-bottom: 6px;
+}
+
+.section-desc {
+    font-size: 14px;
+    color: #6b7280;
+    margin-bottom: 28px;
+}
+
+/* Summary box */
+.summary-box {
+    background: #ffffff;
+    border-radius: 16px;
+    border: 1px solid #e5e7eb;
+    padding: 24px 28px;
+    box-shadow: 0 6px 20px rgba(0,0,0,0.04);
+}
+
+.summary-box h4 {
+    font-size: 20px;
+    font-weight: 700;
+}
+
+.summary-label {
+    font-size: 13px;
+    color: #6b7280;
+}
+
+.summary-value {
+    font-size: 15px;
+    font-weight: 600;
+    color: #111827;
+}
+
+/* Badge style giống Tour Listing */
+.badge-soft-green {
+    background: #dcfce7 !important;
+    color: #166534 !important;
+    border-radius: 10px;
+    font-size: 12px;
+    padding: 4px 10px;
+}
+/* Badge vàng */
+.badge-soft-yellow {
+    background: #FFF4CC;
+    color: #C7A200;
+    padding: 6px 12px;
+    border-radius: 6px;
+    font-weight: 600;
+    font-size: 13px;
+}
+
+.badge-soft-blue {
+    background: #dbeafe !important;
+    color: #1d4ed8 !important;
+    border-radius: 10px;
+    font-size: 12px;
+    padding: 4px 10px;
+}
+
+.badge-soft-gray {
+    background: #f3f4f6 !important;
+    color: #374151 !important;
+    border-radius: 10px;
+    padding: 4px 10px;
+}
+
+/* Card tour gợi ý */
+.tour-card {
+    border-radius: 16px !important;
+    border: 1px solid #e5e7eb !important;
+    overflow: hidden;
+    transition: 0.25s ease;
+    height: 100%;
+}
+
+.tour-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 10px 30px rgba(0,0,0,0.06);
+}
+
+.tour-card-title {
+    font-size: 18px;
+    font-weight: 700;
+    color: #111827;
+}
+
+.tour-card-meta {
+    font-size: 13px;
+    color: #6b7280;
+    margin-bottom: 8px;
+}
+
+.tour-card-price {
+    font-size: 16px;
+    font-weight: 700;
+    color: #059669;
+}
+
+.tour-card-btn {
+    background: #63AB45;
+    border: none;
+    padding: 8px 18px;
+    color: #fff;
+    border-radius: 999px;
+    font-size: 14px;
+    transition: 0.2s ease;
+}
+
+.tour-card-btn:hover {
+    background: #F7921E;
+}
+
+/* Back button */
+.back-btn {
+    border: 1px solid #d1d5db;
+    border-radius: 999px;
+    padding: 10px 26px;
+    background: #fff;
+    color: #374151;
+    transition: 0.2s ease;
+}
+
+.back-btn:hover {
+    background: #f3f4f6;
+}
+
+.btn-tour-modern {
+    background: #ff9800;
+    color: #fff;
+    padding: 12px 28px;
+    border-radius: 50px;
+    border: none;
+    font-weight: 600;
+    font-size: 15px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    cursor: pointer;
+    transition: all 0.25s ease;
+    box-shadow: 0 3px 12px rgba(255, 152, 0, 0.35);
+
+    /* ⭐ KHÔNG FULL WIDTH */
+    width: auto;
+    min-width: 0;
+}
+
+.btn-tour-modern .arrow {
+    display: inline-block;
+    transition: transform 0.25s ease;
+}
+
+.btn-tour-modern:hover {
+    background: #ff8a00;
+    box-shadow: 0 5px 18px rgba(255, 140, 0, 0.45);
+    transform: translateY(-2px);
+}
+
+.btn-tour-modern:hover .arrow {
+    transform: translate(3px, -3px);
+}
+
+.btn-tour-modern:active {
+    transform: scale(0.97);
+}

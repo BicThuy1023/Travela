@@ -44,7 +44,7 @@
             <div class="privacy-section">
                 <p>Bằng cách nhấp chuột vào nút "ĐỒNG Ý" dưới đây, Khách hàng đồng ý rằng các điều kiện điều khoản
                     này sẽ được áp dụng. Vui lòng đọc kỹ điều kiện điều khoản trước khi lựa chọn sử dụng dịch vụ của
-                    Mỹ Mỹ Travel.</p>
+                    Asia Travel.</p>
                 <div class="privacy-checkbox">
                     <input type="checkbox" id="agree" name="agree" checked disabled>
                     <label for="agree">Tôi đã đọc và đồng ý với <a href="#" target="_blank">Điều khoản thanh
@@ -55,19 +55,22 @@
             <h2 class="booking-header">Phương Thức Thanh Toán</h2>
 
             <label class="payment-option">
-                <input type="radio" value="office-payment" @if ($tour_booked->paymentMethod == 'office-payment') checked @endif disabled>
+                <input type="radio" value="office-payment" @if ($tour_booked->paymentMethod == 'office-payment') checked
+                @endif disabled>
                 <img src="{{ asset('clients/assets/images/contact/icon.png') }}" alt="Office Payment">
                 Thanh toán tại văn phòng
             </label>
 
             <label class="payment-option">
-                <input type="radio" value="paypal-payment" @if ($tour_booked->paymentMethod == 'paypal-payment') checked @endif disabled>
+                <input type="radio" value="paypal-payment" @if ($tour_booked->paymentMethod == 'paypal-payment') checked
+                @endif disabled>
                 <img src="{{ asset('clients/assets/images/booking/cong-thanh-toan-paypal.jpg') }}" alt="PayPal">
                 Thanh toán bằng PayPal
             </label>
 
             <label class="payment-option">
-                <input type="radio" value="momo-payment" @if ($tour_booked->paymentMethod == 'momo-payment') checked @endif disabled>
+                <input type="radio" value="momo-payment" @if ($tour_booked->paymentMethod == 'momo-payment') checked
+                @endif disabled>
                 <img src="{{ asset('clients/assets/images/booking/thanh-toan-momo.jpg') }}" alt="MoMo">
                 Thanh toán bằng Momo
             </label>
@@ -125,8 +128,9 @@
                 <input type="hidden" name="bookingId" value="{{ $bookingId }}">
 
                 @if ($tour_booked->bookingStatus == 'f')
-                    <a href="{{ route('tour-detail', ['id' => $tour_booked->tourId]) }}" class="booking-btn"style="display: inline-block; text-align: center;">
-                       Đánh giá
+                    <a href="{{ route('tour-detail', ['id' => $tour_booked->tourId]) }}" class="booking-btn"
+                        style="display: inline-block; text-align: center;">
+                        Đánh giá
                     </a>
                 @else
                     <button type="submit" class="booking-btn btn-cancel-booking {{ $hide }}">Hủy

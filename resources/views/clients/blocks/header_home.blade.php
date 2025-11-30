@@ -87,24 +87,35 @@
 
                                 <div class="navbar-collapse collapse clearfix">
                                     <ul class="navigation clearfix">
-                                        <li class="{{ Request::url() == route('home') ? 'active' : '' }}"><a
-                                                href="{{ route('home') }}">Trang chủ</a></li>
-                                        <li class="{{ Request::url() == route('about') ? 'active' : '' }}"><a
-                                                href="{{ route('about') }}">Giới thiệu</a></li>
+                                        <li class="{{ Request::url() == route('home') ? 'active' : '' }}">
+                                            <a href="{{ route('home') }}">Trang chủ</a>
+                                        </li>
+
+                                        <li class="{{ Request::url() == route('about') ? 'active' : '' }}">
+                                            <a href="{{ route('about') }}">Giới thiệu</a>
+                                        </li>
+
                                         <li
                                             class="dropdown {{ Request::is('tours') || Request::is('team') || Request::is('tour-detail/*') ? 'active' : '' }}">
                                             <a href="#">Tours</a>
                                             <ul>
                                                 <li><a href="{{ route('tours') }}">Tours</a></li>
                                                 <li><a href="{{ route('team') }}">Hướng dẫn viên</a></li>
+
+                                                <li><a href="{{ route('build-tour.form') }}">Tour Theo Yêu Cầu</a>
+                                                </li>
                                             </ul>
                                         </li>
 
-                                        <li class="{{ Request::url() == route('destination') ? 'active' : '' }}"><a
-                                                href="{{ route('destination') }}">Điểm đến</a></li>
-                                        <li class="{{ Request::url() == route('contact') ? 'active' : '' }}"><a
-                                                href="{{ route('contact') }}">Liên Hệ</a></li>
+                                        <li class="{{ Request::url() == route('destination') ? 'active' : '' }}">
+                                            <a href="{{ route('destination') }}">Điểm đến</a>
+                                        </li>
+
+                                        <li class="{{ Request::url() == route('contact') ? 'active' : '' }}">
+                                            <a href="{{ route('contact') }}">Liên Hệ</a>
+                                        </li>
                                     </ul>
+
                                 </div>
 
                             </nav>

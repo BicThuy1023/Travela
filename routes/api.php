@@ -3,6 +3,7 @@
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\clients\SearchController;
+use App\Http\Controllers\clients\BuildTourController;
 
 /*
 |--------------------------------------------------------------------------
@@ -22,3 +23,6 @@ Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
 // API JS tìm tour
 Route::get('/search-tours-js', [SearchController::class, 'searchToursAjax'])
     ->name('api.search.tours.js');
+
+Route::get('/destinations', [BuildTourController::class, 'searchDestinations'])
+    ->name('api.destinations');

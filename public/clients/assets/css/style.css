@@ -4881,6 +4881,7 @@ h6, .h6, blockquote {
 .popular-destinations-wrap {
   border: 1px solid var(--border-color); }
 
+  
 .destination-active {
   margin-left: -5px;
   margin-right: -5px; }

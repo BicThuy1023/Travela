@@ -33,6 +33,7 @@
                         <ul class="nav child_menu">
                             <li><a href="{{ route('admin.page-add-tours') }}">Thêm Tours</a></li>
                             <li><a href="{{ route('admin.tours') }}">Danh sách Tours</a></li>
+                            <li><a href="{{ route('admin.custom_tours.index') }}">Tours theo yêu cầu</a></li>
                         </ul>
                     </li>
 
@@ -99,7 +100,7 @@
                                         <b><span>{{ $item->fullName }}</span></b>
                                         <span class="time">{{ $item->phoneNumber }}</span>
                                     </span>
-                                    <span class="message text-contact-truncate" >{{ $item->message }} </span>
+                                    <span class="message text-contact-truncate">{{ $item->message }} </span>
                                 </a>
                             </li>
                         @endforeach

@@ -381,22 +381,42 @@
     const closeMapBtn = document.getElementById('close-map-btn');
     const confirmMapBtn = document.getElementById('confirm-map-btn');
 
-    const latText = document.getElementById('popup-lat');
-    const lngText = document.getElementById('popup-lng');
-    const latInput = document.getElementById('search_lat');
-    const lngInput = document.getElementById('search_lng');
+    const startLatText = document.getElementById('popup-start-lat');
+    const startLngText = document.getElementById('popup-start-lng');
+    const endLatText = document.getElementById('popup-end-lat');
+    const endLngText = document.getElementById('popup-end-lng');
+
+    const startLatInput = document.getElementById('search_start_lat');
+    const startLngInput = document.getElementById('search_start_lng');
+    const endLatInput = document.getElementById('search_end_lat');
+    const endLngInput = document.getElementById('search_end_lng');
 
     const destinationInput = document.getElementById('destination');
-    const searchForm = document.getElementById('search_form');
+    const searchFormMap = document.getElementById('search_form');
 
     const originalAction = "{{ route('search') }}";
     const nearbyAction = "{{ route('nearby.tours') }}";
 
-    let map, popupMarker, mapInited = false;
+    let map, mapInited = false;
+    let startMarker = null;
+    let endMarker = null;
+    let clickStep = 0;
+
     const defaultLat = 15.9;
     const defaultLng = 105.8;
 
-    /** mở popup bản đồ **/
+    const redIcon = new L.Icon({
+        iconUrl: "https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-red.png",
+        shadowUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
+        iconSize: [25, 41],
+        iconAnchor: [12, 41],
+        popupAnchor: [1, -34],
+        shadowSize: [41, 41]
+    });
+
+    const greenIcon = new L.Icon.Default();
+
+    // mở popup
     openMapBtn.addEventListener('click', function () {
         modalBackdrop.style.display = 'flex';
 
@@ -417,26 +437,66 @@
                 const lat = e.latlng.lat.toFixed(7);
                 const lng = e.latlng.lng.toFixed(7);
 
-                if (popupMarker) {
-                    map.removeLayer(popupMarker);
+                if (clickStep === 0) {
+                    if (startMarker) map.removeLayer(startMarker);
+
+                    startMarker = L.marker([lat, lng], { icon: greenIcon })
+                        .addTo(map)
+                        .bindPopup("Điểm khởi hành")
+                        .openPopup();
+
+                    startLatText.textContent = lat;
+                    startLngText.textContent = lng;
+                    startLatInput.value = lat;
+                    startLngInput.value = lng;
+
+                    clickStep = 1;
+                    return;
                 }
-                popupMarker = L.marker([lat, lng]).addTo(map);
 
-                latText.textContent = lat;
-                lngText.textContent = lng;
+                if (clickStep === 1) {
+                    if (endMarker) map.removeLayer(endMarker);
 
-                latInput.value = lat;
-                lngInput.value = lng;
+                    endMarker = L.marker([lat, lng], { icon: redIcon })
+                        .addTo(map)
+                        .bindPopup("Điểm kết thúc")
+                        .openPopup();
+
+                    endLatText.textContent = lat;
+                    endLngText.textContent = lng;
+                    endLatInput.value = lat;
+                    endLngInput.value = lng;
+
+                    clickStep = 2;
+                    return;
+                }
+
+                // click lần 3 -> reset
+                if (startMarker) map.removeLayer(startMarker);
+                if (endMarker) map.removeLayer(endMarker);
+                startMarker = null;
+                endMarker = null;
+                clickStep = 0;
+
+                startLatText.textContent = 'chưa chọn';
+                startLngText.textContent = 'chưa chọn';
+                endLatText.textContent = 'chưa chọn';
+                endLngText.textContent = 'chưa chọn';
+
+                startLatInput.value = '';
+                startLngInput.value = '';
+                endLatInput.value = '';
+                endLngInput.value = '';
+
+                map.fire('click', e);
             });
 
             mapInited = true;
         }
 
-        // sửa lỗi map bị lệch khi mở modal
         setTimeout(() => { map.invalidateSize(); }, 200);
     });
 
-    /** đóng popup **/
     function closeModal() {
         modalBackdrop.style.display = 'none';
     }
@@ -445,26 +505,29 @@
         if (e.target === modalBackdrop) closeModal();
     });
 
-    /** xác nhận vị trí **/
     confirmMapBtn.addEventListener('click', function () {
-        if (!latInput.value || !lngInput.value) {
-            alert('Bạn chưa chọn vị trí trên bản đồ.');
+        if (!startLatInput.value || !startLngInput.value) {
+            alert('Bạn chưa chọn điểm khởi hành.');
             return;
         }
 
-        destinationInput.value = 'Đã chọn vị trí trên bản đồ';
+        if (endLatInput.value && endLngInput.value) {
+            destinationInput.value = 'Đã chọn 2 điểm trên bản đồ';
+        } else {
+            destinationInput.value = 'Đã chọn 1 điểm trên bản đồ';
+        }
+
         closeModal();
     });
 
-    /** xử lý gửi form **/
-    searchForm.addEventListener('submit', function () {
-        // Nếu có lat & lng thì chắc chắn là search theo bản đồ
-        const hasCoords = latInput && lngInput && latInput.value !== '' && lngInput.value !== '';
+    // đổi action form khi có dùng bản đồ
+    searchFormMap.addEventListener('submit', function () {
+        const hasStart = startLatInput.value !== '' && startLngInput.value !== '';
 
-        if (hasCoords) {
-            searchForm.action = nearbyAction;
+        if (hasStart) {
+            searchFormMap.action = nearbyAction;
         } else {
-            searchForm.action = originalAction;
+            searchFormMap.action = originalAction;
         }
     });
 </script>

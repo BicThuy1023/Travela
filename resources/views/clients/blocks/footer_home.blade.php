@@ -185,6 +185,7 @@
 <script src="{{ asset('clients/assets/js/custom-js.js') }}"></script>
 <script src="{{ asset('clients/assets/js/jquery.datetimepicker.full.min.js') }}"></script>
 
+
 </body>
 
 </html>
