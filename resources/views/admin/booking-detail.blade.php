@@ -71,7 +71,7 @@
                                                 <br>
                                                 <b>Mã giao dịch:</b> {{ $invoice_booking->transactionId }}
                                                 <br>
-                                                <b>Ngày thanh toán:</b> {{ $invoice_booking->paymentDate }}
+                                                <b>Ngày thanh toán:</b> {{ $invoice_booking->paymentDate ?? date('d-m-Y', strtotime($invoice_booking->bookingDate)) }}
                                                 <br>
                                                 <b>Tài khoản:</b> {{ $invoice_booking->userId }}
                                             </div>
@@ -141,27 +141,44 @@
                                             <!-- /.col -->
                                             <div class="col-md-6">
                                                 <p class="lead">Số tiền phải trả trước
-                                                    {{ date('d-m-Y', strtotime($invoice_booking->startDate)) }}</p>
+                                                    @if (isset($invoice_booking->startDate))
+                                                        {{ date('d-m-Y', strtotime($invoice_booking->startDate)) }}
+                                                    @else
+                                                        {{ date('d-m-Y', strtotime($invoice_booking->bookingDate)) }}
+                                                    @endif
+                                                </p>
                                                 <div class="table-responsive">
                                                     <table class="table">
                                                         <tbody>
                                                             <tr>
-                                                                <th style="width:50%">Tổng tiền:</th>
-                                                                <td>{{ number_format($invoice_booking->totalPrice, 0, ',', '.') }}
+                                                                <th style="width:50%">Tổng tiền (trước giảm giá):</th>
+                                                                <td>{{ number_format($invoice_booking->undiscountedTotal ?? $invoice_booking->totalPrice ?? 0, 0, ',', '.') }}
                                                                     vnđ</td>
                                                             </tr>
                                                             <tr>
                                                                 <th>Tax (0%)</th>
                                                                 <td>0 vnđ</td>
                                                             </tr>
+                                                            @if (isset($invoice_booking->discountAmount) && $invoice_booking->discountAmount > 0)
+                                                            <tr>
+                                                                <th>Giảm giá 
+                                                                    @if (isset($invoice_booking->groupDiscountPercent) && $invoice_booking->groupDiscountPercent > 0)
+                                                                        (Ưu đãi tour đoàn {{ $invoice_booking->groupDiscountPercent }}%)
+                                                                    @endif
+                                                                </th>
+                                                                <td style="color: #28a745;">- {{ number_format($invoice_booking->discountAmount, 0, ',', '.') }}
+                                                                    vnđ</td>
+                                                            </tr>
+                                                            @else
                                                             <tr>
                                                                 <th>Giảm giá</th>
                                                                 <td>0 vnđ</td>
                                                             </tr>
+                                                            @endif
                                                             <tr>
                                                                 <th>Tổng tiền:</th>
-                                                                <td>{{ number_format($invoice_booking->amount, 0, ',', '.') }}
-                                                                    vnđ</td>
+                                                                <td><strong>{{ number_format($invoice_booking->amount ?? $invoice_booking->totalPrice ?? 0, 0, ',', '.') }}
+                                                                    vnđ</strong></td>
                                                             </tr>
                                                         </tbody>
                                                     </table>

@@ -11,8 +11,29 @@
 }
 
 /* Style for dropdown for login */
+.menu-sidebar {
+    position: relative; /* For absolute positioning of dropdown */
+}
+
 .menu-sidebar .dropdown-menu {
     padding: 0;
+}
+
+/* User dropdown button styling */
+#userDropdown {
+    cursor: pointer;
+    border: none;
+    background: transparent;
+    padding: 0;
+    outline: none;
+}
+
+#userDropdown:hover {
+    opacity: 0.8;
+}
+
+#userDropdown:focus {
+    outline: none;
 }
 
 /* Dropdown menu hidden by default */
@@ -21,6 +42,11 @@
     position: absolute;
     top: 60px; /* Adjust to the correct position */
     right: 0;
+    display: none; /* Hidden by default */
+    background-color: white;
+    min-width: 180px;
+    z-index: 1000;
+    border-radius: 4px;
 }
 .menu-sidebar .dropdown-menu {
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2); /* Thêm box-shadow */
@@ -29,12 +55,21 @@
     padding: 8px 16px;
     border-bottom: 1px solid var(--border-color);
 }
+.dropdown-menu li a {
+    display: block;
+    text-decoration: none;
+    color: #333;
+    width: 100%;
+}
 /* Loại bỏ đường viền dưới cho mục cuối cùng */
 .dropdown-menu li:last-child {
     border-bottom: none; /* Không có đường viền dưới cho mục cuối cùng */
 }
 .dropdown-menu li:hover {
     background-color: var(--primary-color);
+}
+.dropdown-menu li:hover a {
+    color: white;
 }
 
 /* css tour in page home  */
@@ -43,6 +78,39 @@
     flex-direction: column;
     justify-content: space-between;
     height: 100%;
+}
+
+/* Giãn dòng giữa các phần tử trong trang chủ để cân đối */
+.destinations-area .destination-item .content .location {
+    margin-bottom: 10px !important;
+}
+
+.destinations-area .destination-item .content h5 {
+    margin-top: 8px;
+    margin-bottom: 12px;
+}
+
+/* Blog meta style for homepage - giống với trang tours */
+.destinations-area .destination-item .content .blog-meta {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    margin-top: 10px;
+}
+
+.destinations-area .destination-item .content .blog-meta li {
+    display: flex;
+    align-items: center;
+    margin-bottom: 2px;
+}
+
+.destinations-area .destination-item .content .blog-meta li:not(:last-child) {
+    margin-right: 10px;
+}
+
+.destinations-area .destination-item .content .blog-meta li i {
+    margin-right: 5px;
 }
 
 /* css tourdetail  */
@@ -459,4 +527,65 @@
     padding: 8px 18px;
     font-size: 13px;
     color: #9ca3af;
+}
+
+/****************************************
+*              LOGIN/SIGNUP TOGGLE      *
+* ***************************************/
+/* Ensure signup form shows when it has class 'show' */
+.login-template .signup.show {
+    display: block !important;
+}
+
+/* Ensure signin form shows when it has class 'show' */
+.login-template .sign-in.show {
+    display: block !important;
+}
+
+/* Ensure forgot password form shows when it has class 'show' */
+.login-template .forgot-password.show {
+    display: block !important;
+}
+
+/* Hide signin form when it doesn't have class 'show' */
+.login-template .sign-in:not(.show) {
+    display: none !important;
+}
+
+/* Hide signup form when it doesn't have class 'show' */
+.login-template .signup:not(.show) {
+    display: none !important;
+}
+
+/* Hide forgot password form when it doesn't have class 'show' */
+.login-template .forgot-password:not(.show) {
+    display: none !important;
+}
+
+/* Hide forgot password form by default */
+.login-template .forgot-password {
+    display: none;
+}
+
+/* Make signup-image-link clickable */
+.signup-image-link {
+    cursor: pointer;
+    text-decoration: none;
+}
+
+.signup-image-link:hover {
+    text-decoration: underline;
+    color: var(--primary-color) !important;
+}
+
+/* Forgot password link styling */
+.forgot-password-link {
+    color: #188d09;
+    text-decoration: none;
+    font-size: 14px;
+}
+
+.forgot-password-link:hover {
+    text-decoration: underline;
+    color: #0f5d05;
 }

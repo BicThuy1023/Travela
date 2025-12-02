@@ -12,25 +12,29 @@
             <div class="booking__infor">
                 <div class="form-group">
                     <label for="username">Họ và tên*</label>
-                    <input type="text" id="username" placeholder="Nhập Họ và tên" name="fullName" required>
+                    <input type="text" id="username" placeholder="Nhập Họ và tên" name="fullName" required
+                        value="{{ old('fullName', $user->fullName ?? '') }}">
                     <span class="error-message" id="usernameError"></span>
                 </div>
 
                 <div class="form-group">
                     <label for="email">Email*</label>
-                    <input type="email" id="email" placeholder="sample@gmail.com" name="email" required>
+                    <input type="email" id="email" placeholder="sample@gmail.com" name="email" required
+                        value="{{ old('email', $user->email ?? '') }}">
                     <span class="error-message" id="emailError"></span>
                 </div>
 
                 <div class="form-group">
                     <label for="tel">Số điện thoại*</label>
-                    <input type="number" id="tel" placeholder="Nhập số điện thoại liên hệ" name="tel" required>
+                    <input type="number" id="tel" placeholder="Nhập số điện thoại liên hệ" name="tel" required
+                        value="{{ old('tel', $user->phoneNumber ?? '') }}">
                     <span class="error-message" id="telError"></span>
                 </div>
 
                 <div class="form-group">
                     <label for="address">Địa chỉ*</label>
-                    <input type="text" id="address" placeholder="Nhập địa chỉ liên hệ" name="address" required>
+                    <input type="text" id="address" placeholder="Nhập địa chỉ liên hệ" name="address" required
+                        value="{{ old('address', $user->address ?? '') }}">
                     <span class="error-message" id="addressError"></span>
                 </div>
 
@@ -40,24 +44,26 @@
             <!-- Passenger Details -->
             <h2 class="booking-header">Hành Khách</h2>
 
+            {{-- Hidden inputs để JS đọc giá --}}
+            <input type="hidden" id="adultPrice" value="{{ $adultPrice }}">
+            <input type="hidden" id="childPrice" value="{{ $childPrice }}">
+
             <div class="booking__quantity">
                 <div class="form-group quantity-selector">
                     <label>Người lớn</label>
                     <div class="input__quanlity">
-                        <button type="button" class="quantity-btn">-</button>
-                        <input type="number" class="quantity-input" value="1" min="1" id="numAdults" name="numAdults"
-                            data-price-adults="{{ $tour->priceAdult }}" readonly>
-                        <button type="button" class="quantity-btn">+</button>
+                        <button type="button" class="quantity-btn" data-action="decrease" data-target="numAdults">-</button>
+                        <input type="number" class="quantity-input" value="{{ $adults }}" min="1" id="numAdults" name="numAdults">
+                        <button type="button" class="quantity-btn" data-action="increase" data-target="numAdults">+</button>
                     </div>
                 </div>
 
                 <div class="form-group quantity-selector">
                     <label>Trẻ em</label>
                     <div class="input__quanlity">
-                        <button type="button" class="quantity-btn">-</button>
-                        <input type="number" class="quantity-input" value="0" min="0" id="numChildren"
-                            name="numChildren" data-price-children="{{ $tour->priceChild }}" readonly>
-                        <button type="button" class="quantity-btn">+</button>
+                        <button type="button" class="quantity-btn" data-action="decrease" data-target="numChildren">-</button>
+                        <input type="number" class="quantity-input" value="{{ $children }}" min="0" id="numChildren" name="numChildren">
+                        <button type="button" class="quantity-btn" data-action="increase" data-target="numChildren">+</button>
                     </div>
                 </div>
             </div>
@@ -96,6 +102,7 @@
                 @endif
             </label>
 
+            {{-- Hidden input để lưu phương thức thanh toán được chọn --}}
             <input type="hidden" name="payment_hidden" id="payment_hidden">
         </div>
 
@@ -115,29 +122,29 @@
                     <div class="summary-item">
                         <span>Người lớn:</span>
                         <div>
-                            <span class="quantity__adults">1</span>
-                            <span>X</span>
-                            <span class="total-price">0 VNĐ</span>
+                            <span class="quantity__adults">{{ $adults }}</span>
+                            <span> × </span>
+                            <span class="adult-price-display">{{ number_format($adultPrice, 0, ',', '.') }} VNĐ</span>
                         </div>
                     </div>
                     <div class="summary-item">
                         <span>Trẻ em:</span>
                         <div>
-                            <span class="quantity__children">0</span>
-                            <span>X</span>
-                            <span class="total-price">0 VNĐ</span>
+                            <span class="quantity__children">{{ $children }}</span>
+                            <span> × </span>
+                            <span class="child-price-display">{{ number_format($childPrice, 0, ',', '.') }} VNĐ</span>
                         </div>
                     </div>
                     <div class="summary-item">
                         <span>Giảm giá:</span>
                         <div>
-                            <span class="total-price">0 VNĐ</span>
+                            <span class="discount-amount">0 VNĐ</span>
                         </div>
                     </div>
                     <div class="summary-item total-price">
                         <span>Tổng cộng:</span>
-                        <span>0 VNĐ</span>
-                        <input type="hidden" class="totalPrice" name="totalPrice" value="">
+                        <span id="totalPriceDisplay">{{ number_format($totalPrice, 0, ',', '.') }} VNĐ</span>
+                        <input type="hidden" id="totalPrice" name="totalPrice" value="{{ $totalPrice }}">
                     </div>
                 </div>
                 <div class="order-coupon">
@@ -159,5 +166,150 @@
     </form>
 </section>
 
+{{-- JavaScript tính toán giá --}}
+<script>
+(function() {
+    'use strict';
+
+    // Lấy các elements
+    const adultPriceInput = document.getElementById('adultPrice');
+    const childPriceInput = document.getElementById('childPrice');
+    const numAdultsInput = document.getElementById('numAdults');
+    const numChildrenInput = document.getElementById('numChildren');
+    const quantityAdultsSpan = document.querySelector('.quantity__adults');
+    const quantityChildrenSpan = document.querySelector('.quantity__children');
+    const totalPriceDisplay = document.getElementById('totalPriceDisplay');
+    const totalPriceHidden = document.getElementById('totalPrice');
+    const quantityButtons = document.querySelectorAll('.quantity-btn');
+
+    // Kiểm tra elements tồn tại
+    if (!adultPriceInput || !childPriceInput || !numAdultsInput || !numChildrenInput) {
+        console.error('Không tìm thấy các elements cần thiết');
+        return;
+    }
+
+    // Lấy giá từ hidden inputs
+    const adultPrice = parseInt(adultPriceInput.value) || 0;
+    const childPrice = parseInt(childPriceInput.value) || 0;
+
+    /**
+     * Format số tiền theo định dạng Việt Nam
+     */
+    function formatPrice(price) {
+        return new Intl.NumberFormat('vi-VN').format(price) + ' VNĐ';
+    }
+
+    /**
+     * Tính và cập nhật tổng tiền
+     */
+    function updateTotalPrice() {
+        const adults = parseInt(numAdultsInput.value) || 0;
+        const children = parseInt(numChildrenInput.value) || 0;
+
+        // Tính tổng tiền
+        const totalPrice = (adults * adultPrice) + (children * childPrice);
+
+        // Cập nhật hiển thị
+        if (quantityAdultsSpan) {
+            quantityAdultsSpan.textContent = adults;
+        }
+        if (quantityChildrenSpan) {
+            quantityChildrenSpan.textContent = children;
+        }
+        if (totalPriceDisplay) {
+            totalPriceDisplay.textContent = formatPrice(totalPrice);
+        }
+        if (totalPriceHidden) {
+            totalPriceHidden.value = totalPrice;
+        }
+    }
+
+    /**
+     * Xử lý nút +/-
+     */
+    quantityButtons.forEach(btn => {
+        btn.addEventListener('click', function() {
+            const action = this.getAttribute('data-action');
+            const target = this.getAttribute('data-target');
+            const input = document.getElementById(target);
+
+            if (!input) return;
+
+            let currentValue = parseInt(input.value) || 0;
+            const min = parseInt(input.getAttribute('min')) || 0;
+
+            if (action === 'increase') {
+                currentValue++;
+            } else if (action === 'decrease') {
+                currentValue = Math.max(min, currentValue - 1);
+            }
+
+            input.value = currentValue;
+            updateTotalPrice();
+        });
+    });
+
+    /**
+     * Xử lý khi người dùng nhập trực tiếp vào input
+     */
+    numAdultsInput.addEventListener('input', function() {
+        let value = parseInt(this.value) || 1;
+        if (value < 1) value = 1;
+        this.value = value;
+        updateTotalPrice();
+    });
+
+    numChildrenInput.addEventListener('input', function() {
+        let value = parseInt(this.value) || 0;
+        if (value < 0) value = 0;
+        this.value = value;
+        updateTotalPrice();
+    });
+
+    /**
+     * Xử lý khi blur (rời khỏi input)
+     */
+    numAdultsInput.addEventListener('blur', function() {
+        let value = parseInt(this.value) || 1;
+        if (value < 1) {
+            value = 1;
+            this.value = value;
+        }
+        updateTotalPrice();
+    });
+
+    numChildrenInput.addEventListener('blur', function() {
+        let value = parseInt(this.value) || 0;
+        if (value < 0) {
+            value = 0;
+            this.value = value;
+        }
+        updateTotalPrice();
+    });
+
+    // Khởi tạo giá ban đầu
+    updateTotalPrice();
+
+    /**
+     * Xử lý phương thức thanh toán - set giá trị vào hidden input
+     */
+    const paymentRadios = document.querySelectorAll('input[name="payment"]');
+    const paymentHidden = document.getElementById('payment_hidden');
+
+    paymentRadios.forEach(radio => {
+        radio.addEventListener('change', function() {
+            if (this.checked && paymentHidden) {
+                paymentHidden.value = this.value;
+            }
+        });
+    });
+
+    // Set giá trị mặc định nếu có radio được chọn sẵn
+    const checkedPayment = document.querySelector('input[name="payment"]:checked');
+    if (checkedPayment && paymentHidden) {
+        paymentHidden.value = checkedPayment.value;
+    }
+})();
+</script>
 
 @include('clients.blocks.footer')

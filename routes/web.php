@@ -72,34 +72,30 @@ Route::post('/build-tour/choose/{index}', [BuildTourController::class, 'chooseTo
     ->name('build-tour.choose');
 // ================== CHECKOUT CUSTOM TOUR (sau khi chọn phương án) ==================
 
-// Sau khi khách chọn phương án → đi đến Checkout
+// Sau khi chọn phương án → sang trang đặt tour
 Route::get('/build-tour/checkout', [BuildTourController::class, 'checkout'])
     ->name('build-tour.checkout')
     ->middleware('checkLoginClient');
 
-// Submit form Checkout
+// Submit form đặt tour theo yêu cầu
 Route::post('/build-tour/checkout', [BuildTourController::class, 'submitCheckout'])
     ->name('build-tour.checkout.submit')
     ->middleware('checkLoginClient');
 
 // ================== BOOKING CUSTOM (đặt tour theo yêu cầu sau khi chọn option) ==================
 
-Route::get('/booking-custom', [BookingController::class, 'bookingCustomForm'])
-    ->name('booking.custom')
+Route::get('/custom-tours/checkout/{id}', [BuildTourController::class, 'checkoutCustomTour'])
+    ->name('custom-tours.checkout')
     ->middleware('checkLoginClient');
 
-Route::post('/booking-custom', [BookingController::class, 'bookingCustomSubmit'])
-    ->name('booking.custom.submit')
+Route::post('/custom-tours/checkout/{id}', [BuildTourController::class, 'submitCustomTourBooking'])
+    ->name('custom-tours.checkout.submit')
     ->middleware('checkLoginClient');
-
-
-
 
 // ================== Map: Tìm tour gần vị trí ==================
 
 Route::get('/nearby-tours', [SearchController::class, 'searchNearby'])->name('nearby.tours');
 Route::get('/dev/update-tour-locations', [ToolController::class, 'updateTourLocations']);
-
 
 // ================== Authentication khách hàng ==================
 
@@ -108,6 +104,11 @@ Route::post('/register', [LoginController::class, 'register'])->name('register')
 Route::post('/login', [LoginController::class, 'login'])->name('user-login');
 Route::get('/logout', [LoginController::class, 'logout'])->name('logout');
 Route::get('activate-account/{token}', [LoginController::class, 'activateAccount'])->name('activate.account');
+
+// Forgot Password
+Route::post('/forgot-password', [LoginController::class, 'forgotPassword'])->name('forgot-password');
+Route::get('/reset-password/{token}', [LoginController::class, 'showResetPasswordForm'])->name('reset-password.form');
+Route::post('/reset-password', [LoginController::class, 'resetPassword'])->name('reset-password');
 
 // Login Google
 Route::get('auth/google', [LoginGoogleController::class, 'redirectToGoogle'])->name('login-google');
@@ -146,6 +147,15 @@ Route::post('/change-avatar-profile', [UserProfileController::class, 'changeAvat
 
 // ================== Booking & Thanh toán ==================
 
+// GET route để xử lý trường hợp redirect sau khi đăng nhập (redirect về tour detail)
+Route::get('/booking/{id?}', function($id = null) {
+    if ($id) {
+        return redirect()->route('tour-detail', ['id' => $id]);
+    }
+    return redirect()->route('home');
+})->name('booking.get');
+
+// POST route cho form booking
 Route::post('/booking/{id?}', [BookingController::class, 'index'])
     ->name('booking')
     ->middleware('checkLoginClient');
@@ -163,6 +173,10 @@ Route::get('cancel-transaction', [PayPalController::class, 'cancelTransaction'])
 
 // Momo
 Route::post('/create-momo-payment', [BookingController::class, 'createMomoPayment'])->name('createMomoPayment');
+Route::post('/momo-ipn', [BookingController::class, 'handleMomoIPN'])->name('momo.ipn'); // IPN webhook từ MoMo
+
+// Test MoMo payment success (chỉ dùng trong development)
+Route::get('/test-momo-success/{customTourId}', [BookingController::class, 'testMomoPaymentSuccess'])->name('test.momo.success');
 
 // Tour đã đặt
 Route::get('/tour-booked', [TourBookedController::class, 'index'])
@@ -218,6 +232,13 @@ Route::prefix('admin')->middleware('admin')->group(function () {
     Route::get('/tour-edit', [ToursManagementController::class, 'getTourEdit'])->name('admin.tour-edit');
     Route::post('/edit-tour', [ToursManagementController::class, 'updateTour'])->name('admin.edit-tour');
     Route::post('/add-temp-images', [ToursManagementController::class, 'uploadTempImagesTours'])->name('admin.add-temp-images');
+
+    // Quản lý tours theo yêu cầu
+    Route::get('/custom-tours', [CustomTourController::class, 'index'])->name('admin.custom_tours.index');
+    Route::post('/custom-tours/confirm-booking', [CustomTourController::class, 'confirmBooking'])->name('admin.custom_tours.confirm-booking');
+    Route::post('/custom-tours/finish-booking', [CustomTourController::class, 'finishBooking'])->name('admin.custom_tours.finish-booking');
+    Route::get('/custom-tours/get-edit', [CustomTourController::class, 'getCustomTourEdit'])->name('admin.custom_tours.get-edit');
+    Route::post('/custom-tours/update', [CustomTourController::class, 'updateCustomTour'])->name('admin.custom_tours.update');
 
     // Quản lý booking
     Route::get('/booking', [BookingManagementController::class, 'index'])->name('admin.booking');

@@ -30,6 +30,9 @@
                                 <input type="submit" name="signin" id="signin" class="form-submit"
                                     value="Đăng nhập" />
                             </div>
+                            <div class="form-group" style="text-align: right; margin-top: 10px;">
+                                <a href="javascript:void(0)" class="forgot-password-link" id="forgot-password-link">Quên mật khẩu?</a>
+                            </div>
                         </form>
                         <div class="social-login">
                             <span class="social-label">Hoặc đăng nhập bằng</span>
@@ -81,6 +84,35 @@
                         <figure><img src="{{ asset('clients/assets/images/login/signup-image.jpg') }}"
                                 alt="sing up image"></figure>
                         <a href="javascript:void(0)" class="signup-image-link" id="sign-in">Tôi đã có tài khoản rồi</a>
+                    </div>
+                </div>
+            </div>
+        </section>
+        <!-- Forgot Password form -->
+        <section class="forgot-password">
+            <div class="container">
+                <div class="signin-content">
+                    <div class="signin-image">
+                        <figure><img src="{{ asset('clients/assets/images/login/signin-image.jpg') }}"
+                                alt="forgot password image"></figure>
+                        <a href="javascript:void(0)" class="signup-image-link" id="back-to-login">Quay lại đăng nhập</a>
+                    </div>
+
+                    <div class="signin-form">
+                        <h2 class="form-title">Quên mật khẩu</h2>
+                        <p style="margin-bottom: 20px; color: #666;">Nhập email của bạn để nhận link đặt lại mật khẩu</p>
+                        <form action="{{ route('forgot-password') }}" method="POST" class="login-form" id="forgot-password-form" style="margin-top: 15px">
+                            @csrf
+                            <div class="form-group">
+                                <label for="email_forgot"><i class="zmdi zmdi-email"></i></label>
+                                <input type="email" name="email_forgot" id="email_forgot" placeholder="Email của bạn" required/>
+                            </div>
+                            <div class="invalid-feedback" style="margin-top:-15px" id="validate_email_forgot"></div>
+                            <div class="form-group form-button">
+                                <input type="submit" name="submit_forgot" id="submit_forgot" class="form-submit"
+                                    value="Gửi yêu cầu" />
+                            </div>
+                        </form>
                     </div>
                 </div>
             </div>

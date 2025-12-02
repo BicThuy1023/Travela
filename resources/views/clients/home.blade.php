@@ -32,7 +32,10 @@
                             <span class="location"><i class="fal fa-map-marker-alt"></i>{{ $tour->destination }}</span>
                             <h5><a href="{{ route('tour-detail', ['id' => $tour->tourId]) }}">{{ $tour->title }}</a>
                             </h5>
-                            <span class="time">{{ $tour->time }}</span>
+                            <ul class="blog-meta">
+                                <li><i class="far fa-clock"></i>{{ $tour->time }}</li>
+                                <li><i class="far fa-user"></i>{{ $tour->quantity }}</li>
+                            </ul>
                         </div>
                         <div class="destination-footer">
                             <span class="price"><span>{{ number_format($tour->priceAdult, 0, ',', '.') }}</span> VND /

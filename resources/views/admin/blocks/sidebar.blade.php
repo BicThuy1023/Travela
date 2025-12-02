@@ -7,16 +7,18 @@
         <div class="clearfix"></div>
 
         <!-- menu profile quick info -->
-        <div class="profile clearfix">
-            <div class="profile_pic">
-                <img src="{{ asset('admin/assets/images/user-profile/avt_admin.jpg') }}" alt="..."
-                    class="img-circle profile_img">
+        <a href="{{ route('admin.admin') }}" style="text-decoration: none; color: inherit; display: block;">
+            <div class="profile clearfix" style="cursor: pointer;">
+                <div class="profile_pic">
+                    <img src="{{ asset('admin/assets/images/user-profile/avt_admin.jpg') }}" alt="..."
+                        class="img-circle profile_img">
+                </div>
+                <div class="profile_info">
+                    <span>Xin chào,</span>
+                    <h2>Admin</h2>
+                </div>
             </div>
-            <div class="profile_info">
-                <span>Xin chào,</span>
-                <h2>Admin</h2>
-            </div>
-        </div>
+        </a>
         <!-- /menu profile quick info -->
 
         <br />

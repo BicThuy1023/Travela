@@ -44,7 +44,7 @@ class DashboardModel extends Model
     public function getValuePayment()
     {
         return DB::table('tbl_checkout')
-            ->select('paymentMethod', \DB::raw('COUNT(*) as count'))
+            ->select('paymentMethod', DB::raw('COUNT(*) as count'))
             ->groupBy('paymentMethod')
             ->get()
             ->toArray();
@@ -63,14 +63,35 @@ class DashboardModel extends Model
 
     public function getNewBooking()
     {
-        return DB::table('tbl_booking')
+        // Lấy cả booking tour thông thường và custom tours
+        $regularBookings = DB::table('tbl_booking')
             ->join('tbl_tours', 'tbl_booking.tourId', '=', 'tbl_tours.tourId')
             ->where('tbl_booking.bookingStatus', 'b')
+            ->whereNotNull('tbl_booking.tourId')
             ->orderByDesc('tbl_booking.bookingDate')
-            ->select('tbl_booking.*', 'tbl_tours.title as tour_name') // Chọn tất cả các cột từ tbl_booking và thêm tên tour từ tbl_tours
-            ->take(3)
+            ->select('tbl_booking.*', 'tbl_tours.title as tour_name')
             ->get();
 
+        $customBookings = DB::table('tbl_booking')
+            ->join('tbl_custom_tours', 'tbl_booking.custom_tour_id', '=', 'tbl_custom_tours.id')
+            ->where('tbl_booking.bookingStatus', 'b')
+            ->whereNotNull('tbl_booking.custom_tour_id')
+            ->orderByDesc('tbl_booking.bookingDate')
+            ->select('tbl_booking.*', 'tbl_custom_tours.option_json')
+            ->get();
+
+        // Xử lý custom bookings để lấy tour_name từ option_json
+        foreach ($customBookings as $booking) {
+            $option = json_decode($booking->option_json, true) ?? [];
+            $booking->tour_name = $option['title'] ?? 'Tour theo yêu cầu';
+            unset($booking->option_json); // Xóa option_json để không gây nhầm lẫn
+        }
+
+        // Gộp và sắp xếp lại, lấy 3 booking mới nhất
+        return $regularBookings->merge($customBookings)
+            ->sortByDesc('bookingDate')
+            ->take(3)
+            ->values();
     }
 
     public function getRevenuePerMonth()

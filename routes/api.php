@@ -26,3 +26,18 @@ Route::get('/search-tours-js', [SearchController::class, 'searchToursAjax'])
 
 Route::get('/destinations', [BuildTourController::class, 'searchDestinations'])
     ->name('api.destinations');
+
+// ================== AI Chatbot Routes ==================
+use App\Http\Controllers\AIController;
+
+Route::prefix('ai')->group(function () {
+    // Public routes
+    Route::post('/chat', [AIController::class, 'chat']);
+    Route::get('/popular', [AIController::class, 'getPopularRooms']);
+    Route::get('/trending', [AIController::class, 'getTrendingDestinations']);
+    
+    // Protected routes (require authentication via session)
+    // Note: Có thể cần điều chỉnh middleware tùy theo cách auth của project
+    Route::get('/recommendations', [AIController::class, 'getRecommendations']);
+    Route::get('/personalized-recommendations', [AIController::class, 'getPersonalizedRecommendations']);
+});

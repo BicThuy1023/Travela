@@ -42,7 +42,11 @@
                         data-aos-offset="50">
                         <div class="image">
                             @if ($tour->bookingStatus == 'b')
-                                <span class="badge">Đợi xác nhận</span>
+                                @if (isset($tour->paymentStatus) && $tour->paymentStatus == 'n')
+                                    <span class="badge" style="background-color: #ff9800">Chờ thanh toán</span>
+                                @else
+                                    <span class="badge">Đợi xác nhận</span>
+                                @endif
                             @elseif ($tour->bookingStatus == 'y')
                                 <span class="badge bgc-pink">Sắp khởi hành</span>
                             @elseif ($tour->bookingStatus == 'f')
@@ -51,9 +55,15 @@
                                 <span class="badge" style="background-color: red">Đã hủy</span>
                             @endif
 
-
-                            <img src="{{ asset('admin/assets/images/gallery-tours/' . $tour->images[0] . '') }}"
-                                alt="Tour List">
+                            @if ($tour->tourId)
+                                {{-- Tour thông thường --}}
+                                <img src="{{ asset('admin/assets/images/gallery-tours/' . $tour->images[0] . '') }}"
+                                    alt="Tour List">
+                            @else
+                                {{-- Custom tour --}}
+                                <img src="{{ asset('clients/assets/images/custom-tour/' . ($tour->images[0] ?? 'custom-1.jpg')) }}"
+                                    alt="Tour theo yêu cầu">
+                            @endif
                         </div>
                         <div class="content">
                             <div class="destination-header">
@@ -84,15 +94,18 @@
                             <div class="destination-footer">
                                 <span class="price"><span>{{ number_format($tour->totalPrice, 0) }}</span>/vnđ</span>
                                 @if ($tour->bookingStatus == 'f')
-                                    <a href="{{ route('tour-detail', ['id' => $tour->tourId]) }}"
-                                        class="theme-btn style-two style-three">
-                                        @if ($tour->rating)
-                                            <span data-hover="Đã đánh giá">Đã đánh giá</span>
-                                        @else
-                                            <span data-hover="Đánh giá">Đánh giá</span>
-                                        @endif
-                                        <i class="fal fa-arrow-right"></i>
-                                    </a>
+                                    @if ($tour->tourId)
+                                        {{-- Chỉ hiển thị nút đánh giá cho tour thông thường --}}
+                                        <a href="{{ route('tour-detail', ['id' => $tour->tourId]) }}"
+                                            class="theme-btn style-two style-three">
+                                            @if ($tour->rating)
+                                                <span data-hover="Đã đánh giá">Đã đánh giá</span>
+                                            @else
+                                                <span data-hover="Đánh giá">Đánh giá</span>
+                                            @endif
+                                            <i class="fal fa-arrow-right"></i>
+                                        </a>
+                                    @endif
                                 @endif
                             </div>
                         </div>

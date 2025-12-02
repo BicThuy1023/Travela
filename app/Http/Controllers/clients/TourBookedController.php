@@ -26,6 +26,12 @@ class TourBookedController extends Controller
         $checkoutId = $req->input('checkoutId');
         $tour_booked = $this->tour->tourBooked($bookingId, $checkoutId);
 
+        // Kiểm tra nếu không tìm thấy booking
+        if (!$tour_booked) {
+            return redirect()->route('my-tours')
+                ->with('error', 'Không tìm thấy thông tin tour đã đặt. Vui lòng kiểm tra lại.');
+        }
+
         // Check if the tour_booked has valid data before accessing properties
         if ($tour_booked && $tour_booked->startDate) {
             $today = Carbon::now();

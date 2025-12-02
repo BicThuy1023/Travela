@@ -7,36 +7,57 @@
     $children = (int) ($requestData['children'] ?? 0);
     $totalPeople = max($adults + $children, 1);
 
-    // Lấy breakdown từ option (do controller đã gửi sẵn)
+    // BẮT BUỘC lấy breakdown từ option để đồng nhất với checkout (giá đã được tính sẵn trong controller)
     $priceBreakdown = $option['price_breakdown'] ?? [];
 
-    // Giá người lớn / trẻ em
-    $adultPrice = $option['price_per_adult'] ?? ($option['price_per_person'] ?? 0);
-    $childPrice = $option['price_per_child'] ?? (int) round($adultPrice * 0.75 / 1000) * 1000;
+    // Hệ số giá trẻ em
+    $childFactor = $priceBreakdown['child_factor'] ?? 0.75;
 
-    // Tổng tiền theo cơ cấu người lớn / trẻ em
-    $totalAdultsPrice = $option['total_price_adults'] ?? ($adultPrice * $adults);
-    $totalChildrenPrice = $option['total_price_children'] ?? ($childPrice * $children);
-    $totalPrice = $option['total_price'] ?? ($totalAdultsPrice + $totalChildrenPrice);
+    // Giá người lớn: BẮT BUỘC lấy từ breakdown trước (đồng nhất với checkout)
+    $adultPrice = (isset($priceBreakdown['adult_price']) && $priceBreakdown['adult_price'] !== null && $priceBreakdown['adult_price'] !== '')
+        ? (int) $priceBreakdown['adult_price']
+        : (int) ($option['price_per_adult'] ?? ($option['price_per_person'] ?? 0));
+
+    // Giá trẻ em: BẮT BUỘC lấy từ breakdown trước (đồng nhất với checkout)
+    $childPrice = (isset($priceBreakdown['child_price']) && $priceBreakdown['child_price'] !== null && $priceBreakdown['child_price'] !== '')
+        ? (int) $priceBreakdown['child_price']
+        : (int) ($option['price_per_child'] ?? (int) round($adultPrice * $childFactor / 1000) * 1000);
+
+    // Tổng tiền theo cơ cấu người lớn / trẻ em (để hiển thị chi tiết)
+    // BẮT BUỘC lấy từ breakdown trước
+    $totalAdultsPrice = (isset($priceBreakdown['total_price_adults']) && $priceBreakdown['total_price_adults'] !== null && $priceBreakdown['total_price_adults'] !== '')
+        ? (int) $priceBreakdown['total_price_adults']
+        : (int) ($option['total_price_adults'] ?? ($adultPrice * $adults));
+
+    $totalChildrenPrice = (isset($priceBreakdown['total_price_children']) && $priceBreakdown['total_price_children'] !== null && $priceBreakdown['total_price_children'] !== '')
+        ? (int) $priceBreakdown['total_price_children']
+        : (int) ($option['total_price_children'] ?? ($childPrice * $children));
+
+    // Tổng giá: BẮT BUỘC lấy final_total_price từ breakdown (đã được tính sẵn trong controller)
+    // Đây là giá chính xác nhất, không tính lại để tránh sai lệch (đồng nhất với checkout)
+    $totalPrice = (isset($priceBreakdown['final_total_price']) && $priceBreakdown['final_total_price'] !== null && $priceBreakdown['final_total_price'] !== '')
+        ? (int) $priceBreakdown['final_total_price']
+        : (int) ($option['total_price'] ?? 0);
 
     // Tổng tạm tính (giá tour chính thức, không tính optional)
     $baseTotal = $totalPrice;
 
     // Hoạt động tùy chọn (nếu controller có gửi)
     $optionalItems = $priceBreakdown['optionals'] ?? [];
+
+    // % giảm giá tour đoàn (nếu có)
+    $discountPercent = (int) ($priceBreakdown['group_discount_percent'] ?? 0);
 @endphp
+
 {{-- ========== GALLERY ẢNH TOUR CUSTOM ========== --}}
 @php
-    // 3 ảnh mẫu – bạn chỉ cần đặt đúng tên file ở thư mục public/clients/assets/images/custom-tour
     $galleryImages = [
         asset('clients/assets/images/custom-tour/custom-1.jpg'),
         asset('clients/assets/images/custom-tour/custom-2.jpg'),
         asset('clients/assets/images/custom-tour/custom-3.jpg'),
     ];
 @endphp
-
 {{-- ========== END GALLERY ========== --}}
-
 
 {{-- Banner giống trang tour-detail --}}
 <section class="page-banner-two rel z-1">
@@ -60,8 +81,6 @@
     </div>
 </section>
 
-<!-- Tour Gallery End -->
-
 <div class="tour-gallery">
     <div class="container-fluid">
         <div class="row gap-10 justify-content-center rel">
@@ -83,7 +102,7 @@
         </div>
     </div>
 </div>
-<!-- Tour Details Area start -->
+
 <section class="tour-details-page pb-100 pt-40">
     <div class="container">
         <div class="row">
@@ -96,7 +115,9 @@
                         <a href="{{ route('build-tour.result') }}" class="text-muted small">
                             ← Quay lại danh sách phương án
                         </a>
-                        <span class="badge badge-soft-yellow">Phương án {{ $optionIndex }}</span>
+                        <span class="badge badge-soft-yellow">
+                            Phương án {{ $optionIndex }}
+                        </span>
                     </div>
 
                     <h3>Khám phá Tours</h3>
@@ -194,8 +215,6 @@
                                     <div class="accordion-body">
                                         @php
                                             $desc = $day['description'] ?? '';
-
-                                            // Tách theo các cụm "Buổi sáng:", "Buổi chiều:", "Buổi tối:"
                                             $segments = preg_split(
                                                 '/(Buổi sáng:|Buổi chiều:|Buổi tối:)/u',
                                                 $desc,
@@ -205,11 +224,9 @@
                                         @endphp
 
                                         @if (count($segments) <= 1)
-                                            {{-- Không tách được thì cứ hiển thị như cũ --}}
                                             <p>{{ $desc }}</p>
                                         @else
                                             @php
-                                                // Phần mở đầu trước khi tới "Buổi sáng:"
                                                 $intro = array_shift($segments);
                                             @endphp
 
@@ -217,7 +234,6 @@
                                                 <p>{{ $intro }}</p>
                                             @endif
 
-                                            {{-- Hiển thị từng buổi thành 1 dòng / bullet --}}
                                             <ul class="mb-2 ps-4">
                                                 @for ($i = 0; $i < count($segments); $i += 2)
                                                     @php
@@ -266,7 +282,6 @@
                     <div class="widget widget-booking" data-aos="fade-up" data-aos-duration="1500" data-aos-offset="50">
                         <h5 class="widget-title">Tour Booking</h5>
 
-                        {{-- Tour custom nên dùng route build-tour.choose --}}
                         <form action="{{ route('build-tour.choose', ['index' => $optionIndex]) }}" method="POST">
                             @csrf
 
@@ -294,30 +309,45 @@
                                 <li>
                                     Người lớn ({{ $adults }})
                                     <span class="price">
-                                        {{ number_format($adultPrice, 0, ',', '.') }} VND
+                                        {{ $adults }} x {{ number_format($adultPrice, 0, ',', '.') }} VND
                                     </span>
                                 </li>
 
                                 @if($children > 0)
                                     <li>
-                                        Trẻ em (ước tính) ({{ $children }})
+                                        Trẻ em ({{ $children }})
                                         <span class="price">
-                                            {{ number_format($childPrice, 0, ',', '.') }} VND
+                                            {{ $children }} x {{ number_format($childPrice, 0, ',', '.') }} VND
                                         </span>
                                     </li>
                                 @endif
                             </ul>
 
+
                             {{-- 💰 CHI TIẾT CHI PHÍ / 1 NGƯỜI LỚN --}}
                             @if (!empty($priceBreakdown))
                                 @php
-                                    $hotelRaw = $priceBreakdown['hotel_per_person'] ?? 0;
-                                    // Nếu tour 0 đêm thì hiển thị 0 cho dễ hiểu
-                                    $hotelDisplay = ($requestData['nights'] ?? 0) > 0 ? $hotelRaw : 0;
+                                    // Lấy giá trị sau hệ số gói (chưa nhân hệ số tour riêng) để hiển thị trong breakdown
+                                    $hotelCost = $priceBreakdown['hotel_per_person'] ?? 0;
+                                    $foodCost = $priceBreakdown['food_per_person'] ?? 0;
+                                    $actCost = $priceBreakdown['activity_per_person'] ?? 0;
+                                    $transport = $priceBreakdown['transport_per_person'] ?? 0;
 
-                                    $baseSubtotal = $priceBreakdown['base_subtotal_per_person'] ?? 0;
-                                    // Phụ phí + lợi nhuận công ty = giá cuối cùng - chi phí gốc
-                                    $serviceFee = max($adultPrice - $baseSubtotal, 0);
+                                    // Tổng chi phí dịch vụ gốc = tổng 4 mục cơ bản (sau hệ số gói, chưa nhân hệ số tour riêng)
+                                    $coreCost = $hotelCost + $foodCost + $actCost + $transport;
+
+                                    // Phí dịch vụ sau khi nhân hệ số gói (đã bao gồm phí tour riêng nếu có)
+                                    $serviceFee = $priceBreakdown['service_fee_after_multiplier'] ?? $priceBreakdown['service_fee_per_person'] ?? 0;
+                                    $surcharge = $priceBreakdown['surcharge_after_multiplier'] ?? $priceBreakdown['surcharge_per_person'] ?? 0;
+
+                                    // Tổng trước giảm và số tiền giảm / 1 người lớn
+                                    $baseBeforeDiscount = $priceBreakdown['base_before_discount_per_person'] ?? 0;
+                                    $groupDiscountPercent = $priceBreakdown['group_discount_percent'] ?? 0;
+                                    $discountPerAdult = $priceBreakdown['discount_amount_per_adult'] ?? 0;
+
+                                    // Kiểm tra xem có phí tour riêng không
+                                    $isPrivateTour = $priceBreakdown['is_private_tour'] ?? false;
+                                    $privateMultiplier = $priceBreakdown['private_multiplier'] ?? 1.0;
                                 @endphp
 
                                 <div class="cost-breakdown mt-15 mb-10">
@@ -325,53 +355,55 @@
                                     <table class="table table-sm mb-5">
                                         <tbody>
                                             <tr>
-                                                <td>Khách sạn ({{ $requestData['nights'] }} đêm)</td>
-                                                <td class="text-end">
-                                                    {{ number_format($hotelDisplay, 0, ',', '.') }}
-                                                    VND
-                                                </td>
+                                                <td>Khách sạn ({{ $option['nights'] }} đêm)</td>
+                                                <td class="text-end">{{ number_format($hotelCost, 0, ',', '.') }} VND</td>
                                             </tr>
                                             <tr>
-                                                <td>Ăn uống ({{ $requestData['days'] }} ngày)</td>
-                                                <td class="text-end">
-                                                    {{ number_format($priceBreakdown['food_per_person'] ?? 0, 0, ',', '.') }}
-                                                    VND
-                                                </td>
+                                                <td>Ăn uống ({{ $option['days'] }} ngày)</td>
+                                                <td class="text-end">{{ number_format($foodCost, 0, ',', '.') }} VND</td>
                                             </tr>
                                             <tr>
                                                 <td>Vé tham quan & hoạt động</td>
-                                                <td class="text-end">
-                                                    {{ number_format($priceBreakdown['activity_per_person'] ?? 0, 0, ',', '.') }}
-                                                    VND
-                                                </td>
+                                                <td class="text-end">{{ number_format($actCost, 0, ',', '.') }} VND</td>
                                             </tr>
                                             <tr>
                                                 <td>Di chuyển nội bộ</td>
-                                                <td class="text-end">
-                                                    {{ number_format($priceBreakdown['transport_per_person'] ?? 0, 0, ',', '.') }}
-                                                    VND
-                                                </td>
+                                                <td class="text-end">{{ number_format($transport, 0, ',', '.') }} VND</td>
                                             </tr>
+
                                             <tr class="fw-semibold">
                                                 <td>Tổng chi phí dịch vụ gốc</td>
-                                                <td class="text-end">
-                                                    {{ number_format($baseSubtotal, 0, ',', '.') }}
-                                                    VND
-                                                </td>
+                                                <td class="text-end">{{ number_format($coreCost, 0, ',', '.') }} VND</td>
                                             </tr>
 
-                                            <tr class="text-muted small">
-                                                <td>Phụ phí </td>
-                                                <td class="text-end">
-                                                    {{ number_format($serviceFee, 0, ',', '.') }} VND
+                                            <tr class="small text-muted">
+                                                <td>
+                                                    Phí dịch vụ / điều hành tour<sup>(*)</sup>
                                                 </td>
+                                                <td class="text-end">{{ number_format($serviceFee, 0, ',', '.') }} VND</td>
                                             </tr>
 
-                                            @if(($priceBreakdown['group_discount_percent'] ?? 0) > 0)
+                                            @if($surcharge > 0)
+                                                <tr class="small text-muted">
+                                                    <td>Phụ thu cao điểm</td>
+                                                    <td class="text-end">{{ number_format($surcharge, 0, ',', '.') }} VND</td>
+                                                </tr>
+                                            @endif
+
+                                            {{-- Chỉ hiển thị "Tổng trước ưu đãi" nếu có ưu đãi --}}
+                                            @if($groupDiscountPercent > 0 && $discountPerAdult > 0)
+                                            {{-- Tổng trước khi áp dụng ưu đãi đoàn --}}
+                                                {{-- Đảm bảo tổng khớp: coreCost + serviceFee + surcharge = baseBeforeDiscount --}}
+                                            <tr class="fw-semibold">
+                                                <td>Tổng trước ưu đãi</td>
+                                                <td class="text-end">{{ number_format($baseBeforeDiscount, 0, ',', '.') }}
+                                                    VND</td>
+                                            </tr>
+
                                                 <tr class="text-success small">
-                                                    <td>Ưu đãi tour đoàn (chiết khấu)</td>
+                                                    <td>Ưu đãi tour đoàn ({{ $groupDiscountPercent }}%)</td>
                                                     <td class="text-end">
-                                                        -{{ $priceBreakdown['group_discount_percent'] }}% / khách
+                                                        -{{ number_format($discountPerAdult, 0, ',', '.') }} VND
                                                     </td>
                                                 </tr>
                                             @endif
@@ -384,12 +416,17 @@
                                             </tr>
                                         </tbody>
                                     </table>
+                                    <p class="small text-muted mt-2 mb-0">
+                                        <sup>(*)</sup> Phí dịch vụ / điều hành tour bao gồm: phí dịch vụ, phí điều hành, phí
+                                        tạo tour riêng và các chi phí vận hành khác.
+                                    </p>
                                 </div>
                             @endif
 
+
                             {{-- ================= HOẠT ĐỘNG TRẢI NGHIỆM (CHI PHÍ TỰ TÚC) ================= --}}
                             @php
-                                $totalPeople = $option['total_people'] ?? max(($requestData['adults'] ?? 1) + ($requestData['children'] ?? 0), 1);
+                                $totalPeopleOption = $option['total_people'] ?? $totalPeople;
                                 $baseTotalPrice = $option['total_price'] ?? ($priceBreakdown['final_total_price'] ?? 0);
                             @endphp
 
@@ -402,7 +439,6 @@
                                             Bạn có thể tick để ước lượng tổng chi phí chuyến đi nếu tham gia.
                                         </p>
 
-                                        {{-- DANH SÁCH HOẠT ĐỘNG --}}
                                         <div class="d-flex flex-column gap-3">
                                             @foreach ($priceBreakdown['optionals'] as $idx => $opt)
                                                 @php
@@ -410,7 +446,7 @@
                                                     $label = $opt['label'] ?? 'Hoạt động';
                                                     $note = $opt['note'] ?? null;
                                                     $pricePerPax = (int) ($opt['price_per_person'] ?? 0);
-                                                    $totalForAll = $pricePerPax * $totalPeople;
+                                                    $totalForAll = $pricePerPax * $totalPeopleOption;
                                                 @endphp
 
                                                 <label
@@ -429,7 +465,7 @@
                                                         @if ($pricePerPax > 0)
                                                             <div class="small text-muted mb-1">
                                                                 {{ number_format($pricePerPax, 0, ',', '.') }}đ/người
-                                                                ({{ $totalPeople }} người →
+                                                                ({{ $totalPeopleOption }} người →
                                                                 {{ number_format($totalForAll, 0, ',', '.') }}đ)
                                                             </div>
                                                         @endif
@@ -443,14 +479,14 @@
                                                 </label>
                                             @endforeach
                                         </div>
-
-                                        {{-- <div class="small text-muted mt-3">
-                                            * Đây là chi phí ước tính, có thể thay đổi theo thời điểm khởi hành, loại phòng
-                                            và yêu cầu thực tế.
-                                        </div> --}}
                                     </div>
                                 </div>
                             @endif
+
+                            {{-- Hidden input để lưu giá optional activities --}}
+                            <input type="hidden" name="optional_activities_total" id="optionalActivitiesTotal"
+                                value="0">
+                            <input type="hidden" name="final_total_price" id="finalTotalPrice" value="{{ $baseTotal }}">
 
                             {{-- Tạm tính tổng (chỉ tính giá tour) --}}
                             <div class="mt-10 mb-1 small d-flex justify-content-between">
@@ -500,9 +536,8 @@
         </div>
     </div>
 </section>
-<!-- Tour Details Area end -->
 
-{{-- CSS nhỏ cho phần hoạt động tùy chọn, bạn có thể đưa vào file CSS chung --}}
+{{-- CSS nhỏ cho phần hoạt động tùy chọn --}}
 <style>
     .cost-row-optional-card {
         padding: 10px 12px;
@@ -579,6 +614,16 @@
             const finalTotal = baseTotal + extra;
             totalEl.textContent = formatCurrency(finalTotal);
 
+            // Cập nhật hidden input để gửi giá optional khi submit form
+            const optionalTotalInput = document.getElementById('optionalActivitiesTotal');
+            const finalTotalInput = document.getElementById('finalTotalPrice');
+            if (optionalTotalInput) {
+                optionalTotalInput.value = extra;
+            }
+            if (finalTotalInput) {
+                finalTotalInput.value = finalTotal;
+            }
+
             if (extra > 0 && extraLabel && extraAmountSpan) {
                 extraLabel.classList.remove('d-none');
                 extraAmountSpan.textContent = formatCurrency(extra);
@@ -591,11 +636,8 @@
             cb.addEventListener('change', updateTotal);
         });
 
-        // chạy lần đầu
         updateTotal();
     })();
 </script>
-
-@include('clients.blocks.footer')
 
 @include('clients.blocks.footer')

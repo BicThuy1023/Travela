@@ -67,15 +67,15 @@ class BuildTourController extends Controller
     $totalPeople = max($adults + $children, 1);
 
     /*
-     * Quy ước:
-     *  - < 4 khách  : tour cá nhân (private) → giá/khách cao hơn, không giảm giá đoàn
-     *  - >= 4 khách : tour đoàn (group)      → được áp dụng khuyến mãi theo số lượng
+     * Quy ước mới cho tour tự thiết kế:
+     *  - 1 khách  : tour cá nhân (private) → hệ số riêng
+     *  - >= 2 khách : tour đoàn (group)    → được áp dụng khuyến mãi theo số lượng
      *   (match với hàm calculateGroupDiscountFactor)
      */
-    if ($totalPeople >= 4) {
-        $normalizedTourType = 'group';
-    } else {
+    if ($totalPeople === 1) {
         $normalizedTourType = 'private';
+    } else {
+        $normalizedTourType = 'group';
     }
 
     // 5. GOM DATA
@@ -197,15 +197,28 @@ public function showOptionDetail($index, Request $request)
             ->with('error', 'Phiên làm việc đã hết hạn, vui lòng thiết kế tour lại.');
     }
 
-    // option_index hiển thị là 1,2,3... => mảng là 0,1,2...
-    $arrayIndex = (int)$index - 1;
+    // LUÔN tìm option theo option_index để đảm bảo đúng phương án được chọn
+    // Không dựa vào array index vì có thể bị sắp xếp lại hoặc không khớp
+    $option = null;
+    foreach ($generatedTours as $tour) {
+        if (isset($tour['option_index']) && (int)$tour['option_index'] === (int)$index) {
+            $option = $tour;
+            break;
+        }
+    }
 
-    if (!isset($generatedTours[$arrayIndex])) {
+    // Nếu không tìm thấy option theo option_index, fallback về array index (để tương thích ngược)
+    if (!$option) {
+        $arrayIndex = (int)$index - 1;
+        if (isset($generatedTours[$arrayIndex])) {
+            $option = $generatedTours[$arrayIndex];
+        }
+    }
+
+    if (!$option) {
         return redirect()->route('build-tour.result')
             ->with('error', 'Phương án tour không tồn tại. Vui lòng chọn lại.');
     }
-
-    $option = $generatedTours[$arrayIndex];
 
     // Lấy thêm 1 số thông tin tiện cho view
     $totalPeople = max(($requestData['adults'] ?? 0) + ($requestData['children'] ?? 0), 1);
@@ -213,6 +226,9 @@ public function showOptionDetail($index, Request $request)
     $tourTypeLabel = $tourType === 'private' ? 'Tour cá nhân' : 'Tour đoàn';
 
     $discountPercent = (int)($option['group_discount_percent'] ?? 0);
+
+    // Đảm bảo optionIndex khớp với option_index trong data
+    $optionIndex = isset($option['option_index']) ? (int)$option['option_index'] : (int)$index;
 
     return view('clients.build_tour_option_detail', [
         'title'           => 'Chi tiết phương án tour',
@@ -223,7 +239,7 @@ public function showOptionDetail($index, Request $request)
         'tourType'        => $tourType,
         'tourTypeLabel'   => $tourTypeLabel,
         'discountPercent' => $discountPercent,
-        'optionIndex'     => (int)$index,
+        'optionIndex'     => $optionIndex,
     ]);
 }
 
@@ -231,60 +247,144 @@ public function showOptionDetail($index, Request $request)
      * Khi khách bấm "Chọn tour này"
      */
     public function chooseTour($index, Request $request)
-    {
-        // 🔥 KIỂM TRA LOGIN THEO SESSION CỦA BẠN (userId / username)
-        if (!$request->session()->has('userId') && !$request->session()->has('username')) {
+{
+    // 🔥 KIỂM TRA LOGIN THEO SESSION CỦA BẠN (userId / username)
+    if (!$request->session()->has('userId') && !$request->session()->has('username')) {
 
-            // Lưu URL muốn quay lại sau khi login
-            $request->session()->put('url.intended', route('build-tour.result'));
-
-            return redirect()
-                ->route('login')
-                ->with('info', 'Vui lòng đăng nhập để tiếp tục.');
-        }
-
-        // Đã đăng nhập
-        $generatedTours = $request->session()->get('build_tour.generatedTours');
-        $requestData    = $request->session()->get('build_tour.requestData');
-        $requestCode    = $request->session()->get('build_tour.requestCode');
-
-        if (!is_array($generatedTours) || !isset($generatedTours[$index]) || !$requestData) {
-            return redirect()->route('build-tour.result')
-                ->with('error', 'Tour bạn chọn không tồn tại hoặc phiên làm việc đã hết hạn.');
-        }
-
-        $chosenTour = $generatedTours[$index];
-
-        $userId      = $request->session()->get('userId');
-        $adults      = $requestData['adults'] ?? 1;
-        $children    = $requestData['children'] ?? 0;
-        $totalPeople = $adults + $children;
-
-        // 3. Lưu option đã chọn vào tbl_custom_tours
-        $customTourId = DB::table('tbl_custom_tours')->insertGetId([
-            'user_id'       => $userId,
-            'request_code'  => $requestCode,
-            'option_code'   => $chosenTour['code'] ?? null,
-            'destination'   => implode(' – ', $requestData['main_destinations'] ?? []),
-            'days'          => $chosenTour['days'] ?? 0,
-            'nights'        => $chosenTour['nights'] ?? 0,
-            'hotel_level'   => $chosenTour['hotel_level'] ?? ($requestData['hotel_level'] ?? ''),
-            'intensity'     => $chosenTour['intensity'] ?? ($requestData['intensity'] ?? ''),
-            'total_people'  => $totalPeople,
-            'adults'        => $adults,
-            'children'      => $children,
-            'option_json'   => json_encode($chosenTour, JSON_UNESCAPED_UNICODE),
-            'tour_type'     => $chosenTour['tour_type'] ?? ($requestData['tour_type'] ?? 'group'),
-            'estimated_cost'=> $chosenTour['total_price'] ?? 0,
-            'status'        => 'pending',
-            'created_at'    => now(),
-            'updated_at'    => now(),
-        ]);
+        // Lưu URL muốn quay lại sau khi login
+        $request->session()->put('url.intended', route('build-tour.result'));
 
         return redirect()
-            ->route('custom-tours.checkout', ['id' => $customTourId])
-            ->with('success', 'Bạn đã chọn tour: ' . ($chosenTour['title'] ?? $chosenTour['code']));
+            ->route('login')
+            ->with('info', 'Vui lòng đăng nhập để tiếp tục.');
     }
+
+    // Đã đăng nhập
+    $generatedTours = $request->session()->get('build_tour.generatedTours');
+    $requestData    = $request->session()->get('build_tour.requestData');
+    $requestCode    = $request->session()->get('build_tour.requestCode');
+
+    if (!is_array($generatedTours) || !$requestData) {
+        return redirect()
+            ->route('build-tour.result')
+            ->with('error', 'Tour bạn chọn không tồn tại hoặc phiên làm việc đã hết hạn.');
+    }
+
+    // LUÔN tìm option theo option_index để đảm bảo đúng phương án được chọn
+    // Không dựa vào array index vì có thể bị sắp xếp lại hoặc không khớp
+    $chosenTour = null;
+    foreach ($generatedTours as $tour) {
+        if (isset($tour['option_index']) && (int)$tour['option_index'] === (int)$index) {
+            $chosenTour = $tour;
+            break;
+        }
+    }
+    
+    // Nếu không tìm thấy option theo option_index, fallback về array index (để tương thích ngược)
+    if (!$chosenTour) {
+        $arrayIndex = (int)$index - 1;
+        if (isset($generatedTours[$arrayIndex])) {
+            $chosenTour = $generatedTours[$arrayIndex];
+        }
+    }
+
+    if (!$chosenTour) {
+        return redirect()
+            ->route('build-tour.result')
+            ->with('error', 'Tour bạn chọn không tồn tại hoặc phiên làm việc đã hết hạn.');
+    }
+
+    $userId      = $request->session()->get('userId');
+    $adults      = $requestData['adults'] ?? 1;
+    $children    = $requestData['children'] ?? 0;
+    $totalPeople = $adults + $children;
+
+    // 2a. Lấy giá optional activities từ request (nếu có)
+    $optionalActivitiesTotal = (int) ($request->input('optional_activities_total', 0));
+    $finalTotalPriceFromForm = (int) ($request->input('final_total_price', 0));
+
+    // 2b. Đồng bộ lại tổng tiền từ breakdown để tránh lệch
+    // Đảm bảo price_breakdown luôn có đầy đủ giá trị và đồng bộ với total_price
+    if (isset($chosenTour['price_breakdown']['final_total_price'])) {
+        $chosenTour['total_price'] = $chosenTour['price_breakdown']['final_total_price'];
+        // Đồng bộ lại các giá trị khác từ breakdown để đảm bảo nhất quán
+        if (isset($chosenTour['price_breakdown']['adult_price'])) {
+            $chosenTour['price_per_adult'] = $chosenTour['price_breakdown']['adult_price'];
+        }
+        if (isset($chosenTour['price_breakdown']['child_price'])) {
+            $chosenTour['price_per_child'] = $chosenTour['price_breakdown']['child_price'];
+        }
+        if (isset($chosenTour['price_breakdown']['total_price_adults'])) {
+            $chosenTour['total_price_adults'] = $chosenTour['price_breakdown']['total_price_adults'];
+        }
+        if (isset($chosenTour['price_breakdown']['total_price_children'])) {
+            $chosenTour['total_price_children'] = $chosenTour['price_breakdown']['total_price_children'];
+        }
+    }
+    
+    // 2c. Tính tổng giá cuối cùng: giá tour gốc + optional activities
+    $baseTourPrice = $chosenTour['total_price'] ?? 0;
+    $finalTotalPrice = $baseTourPrice + $optionalActivitiesTotal;
+    
+    // Nếu form gửi final_total_price và khác với tính toán, ưu tiên giá từ form
+    if ($finalTotalPriceFromForm > 0 && abs($finalTotalPriceFromForm - $finalTotalPrice) < 1000) {
+        $finalTotalPrice = $finalTotalPriceFromForm;
+    }
+    
+    // Lưu thông tin optional activities vào chosenTour để hiển thị sau
+    if ($optionalActivitiesTotal > 0) {
+        $chosenTour['optional_activities_total'] = $optionalActivitiesTotal;
+        // Cập nhật price_breakdown để bao gồm optional
+        if (isset($chosenTour['price_breakdown'])) {
+            $chosenTour['price_breakdown']['optional_activities_total'] = $optionalActivitiesTotal;
+            $chosenTour['price_breakdown']['final_total_price'] = $finalTotalPrice;
+        }
+    }
+
+    // 3. Lưu option đã chọn vào tbl_custom_tours
+    // Lấy ngày khởi hành từ requestData (step 1)
+    $startDate = $requestData['start_date'] ?? null;
+    $endDate   = null;
+
+    if ($startDate && !empty($chosenTour['days'])) {
+        $endDate = \Carbon\Carbon::parse($startDate)
+            ->addDays($chosenTour['days'] - 1)
+            ->format('Y-m-d');
+    }
+
+    $customTourId = DB::table('tbl_custom_tours')->insertGetId([
+        'user_id'       => $userId,
+        'request_code'  => $requestCode,
+        'option_code'   => $chosenTour['code'] ?? null,
+        'destination'   => implode(' – ', $requestData['main_destinations'] ?? []),
+        'days'          => $chosenTour['days'] ?? 0,
+        'nights'        => $chosenTour['nights'] ?? 0,
+        'hotel_level'   => $chosenTour['hotel_level'] ?? ($requestData['hotel_level'] ?? ''),
+        'intensity'     => $chosenTour['intensity'] ?? ($requestData['intensity'] ?? ''),
+        'total_people'  => $totalPeople,
+        'adults'        => $adults,
+        'children'      => $children,
+        'tour_type'     => $chosenTour['tour_type'] ?? ($requestData['tour_type'] ?? 'group'),
+
+        // 🔹 LƯU NGÀY ĐI / NGÀY VỀ
+        'start_date'    => $startDate,
+        'end_date'      => $endDate,
+
+        // 🔹 LƯU FULL JSON PHƯƠNG ÁN
+        'option_json'   => json_encode($chosenTour, JSON_UNESCAPED_UNICODE),
+
+        // 🔹 GIÁ TRONG DB = GIÁ HỆ THỐNG TÍNH
+        'estimated_cost'=> $finalTotalPrice,
+
+        'status'        => 'pending',
+        'created_at'    => now(),
+        'updated_at'    => now(),
+    ]);
+
+    return redirect()
+        ->route('custom-tours.checkout', ['id' => $customTourId])
+        ->with('success', 'Bạn đã chọn tour: ' . ($chosenTour['title'] ?? $chosenTour['code']));
+}
 
 /**
  * Sinh phương án tour “ảo” từ yêu cầu (dùng dữ liệu tbl_places)
@@ -504,6 +604,7 @@ if ($d == 1) {
 $desc = $prefix;
 
 if (!empty($placeNames)) {
+    $placeNames = array_values($placeNames);
     // Chia buổi sáng / chiều / tối
     $morningPlaces   = [];
     $afternoonPlaces = [];
@@ -622,100 +723,70 @@ if ($intensity === 'Nhẹ') {
     }
 
     // ================== 2.5. Ước lượng ăn uống + di chuyển ==================
-$hotelLevelLower = mb_strtolower($hotelLevelRaw);
+    // ================== 2.5. Ước lượng ăn uống + di chuyển ==================
+    $hotelLevelLower = mb_strtolower($hotelLevelRaw);
 
-// Ăn uống: chia 3 mức, khách sạn càng cao thì mức chi cho ăn càng rộng
-if (str_contains($hotelLevelLower, 'resort') || str_contains($hotelLevelLower, '4-5') || str_contains($hotelLevelLower, '5')) {
-    $foodCostPerDay = 300000;   // resort / 4-5 sao
-} elseif (str_contains($hotelLevelLower, '3-4') || str_contains($hotelLevelLower, '4') || str_contains($hotelLevelLower, '3')) {
-    $foodCostPerDay = 250000;   // 3-4 sao
-} else {
-    $foodCostPerDay = 180000;   // 1-2 sao / nhà nghỉ
-}
-$foodCostPerPerson = $foodCostPerDay * $days;
-
-// Di chuyển nội bộ (không bao gồm vé máy bay), tính hơi “nhẹ” để hợp với tour đoàn
-$transportBaseDays      = max($days, 2);
-$transportCostPerPerson = 120000 + max(0, $transportBaseDays - 2) * 40000;
-
-// ================== 2.6. Thêm phí dịch vụ & phụ thu cao điểm ==================
-// Chi phí "gốc" = tham quan bắt buộc + ăn uống + di chuyển
-$coreCostPerPerson = $mandatoryActCost
-    + $foodCostPerPerson
-    + $transportCostPerPerson;
-
-// Phí dịch vụ / điều hành tour (coi như lợi nhuận, HDV, điều hành...)
-// Ngân sách thấp (<= 2tr) thì lấy biên lợi nhuận mỏng hơn
-$serviceFeeRate = ($baseBudget <= 2000000) ? 0.08 : 0.10;   // 8% hoặc 10%
-$serviceFeePerPerson = (int) round($coreCostPerPerson * $serviceFeeRate / 1000) * 1000;
-
-// Phụ thu cao điểm / cuối tuần (ước tính)
-$surchargePerPerson = 0;
-$highSeasonRate     = 0.0;
-
-if (!empty($requestData['start_date'])) {
-    try {
-        $start = new \DateTime($requestData['start_date']);
-        $dow   = (int) $start->format('N'); // 1=Mon ... 7=Sun
-
-        // Thứ 6–7–CN: +2%
-        if ($dow >= 5) {
-            $highSeasonRate += 0.02;
-        }
-
-        $month = (int) $start->format('n');
-        // T1–T2 (Tết): +2%
-        if ($month === 1 || $month === 2) {
-            $highSeasonRate += 0.02;
-        }
-    } catch (\Exception $e) {
-        // ignore
+    // Ăn uống theo hạng khách sạn
+    if (str_contains($hotelLevelLower, 'resort') || str_contains($hotelLevelLower, '4-5') || str_contains($hotelLevelLower, '5')) {
+        $foodCostPerDay = 300000;   // resort / 4-5 sao
+    } elseif (str_contains($hotelLevelLower, '3-4') || str_contains($hotelLevelLower, '4') || str_contains($hotelLevelLower, '3')) {
+        $foodCostPerDay = 250000;   // 3-4 sao
+    } else {
+        $foodCostPerDay = 180000;   // 1-2 sao / nhà nghỉ
     }
-}
+    $foodCostPerPerson = $foodCostPerDay * $days;
 
-if ($highSeasonRate > 0) {
-    $surchargePerPerson = (int) round($coreCostPerPerson * $highSeasonRate / 1000) * 1000;
-}
+    // Di chuyển nội bộ (không bao gồm vé máy bay)
+    $transportBaseDays      = max($days, 2);
+    $transportCostPerPerson = 120000 + max(0, $transportBaseDays - 2) * 40000;
 
-// Tổng chi phí "gốc + phí dịch vụ + phụ thu", CHƯA gồm khách sạn
-$baseCostPerPersonRaw = $coreCostPerPerson
-    + $serviceFeePerPerson
-    + $surchargePerPerson;
+    // ================== 2.6. Phí dịch vụ & phụ thu cao điểm ==================
+    // Phí dịch vụ / điều hành tour (coi như lợi nhuận, HDV, chi phí vận hành)
+    $serviceFeeRate = ($baseBudget <= 2000000) ? 0.08 : 0.10;   
 
+    // Phụ thu cuối tuần / Tết (nếu có ngày khởi hành)
+    $highSeasonRate = 0.0;
+    if (!empty($requestData['start_date'])) {
+        try {
+            $start = new \DateTime($requestData['start_date']);
+            $dow   = (int) $start->format('N'); // 1=Mon ... 7=Sun
+
+            // Thứ 6–7–CN: +2%
+            if ($dow >= 5) {
+                $highSeasonRate += 0.02;
+            }
+
+            $month = (int) $start->format('n');
+            // T1–T2 (Tết): +2%
+            if ($month === 1 || $month === 2) {
+                $highSeasonRate += 0.05;
+            }
+        } catch (\Exception $e) {
+            // ignore
+        }
+    }
 
     // ================== 3. Cấu hình gói & hệ số giá ==================
     $isUnknownHotelLvl = $hotelLevelRaw === '' ||
         str_contains($hotelLevelLower, 'chưa biết') ||
         str_contains($hotelLevelLower, 'unknown');
 
+    // 3 gói: tiết kiệm / tiêu chuẩn / nâng cao
     $packageMeta = [
-        1 => ['suffix' => 'Gói tiết kiệm',  'multiplier' => 0.8],
+        1 => ['suffix' => 'Gói tiết kiệm',  'multiplier' => 0.9],
         2 => ['suffix' => 'Gói tiêu chuẩn', 'multiplier' => 1.0],
         3 => ['suffix' => 'Gói nâng cao',   'multiplier' => 1.15],
     ];
 
-    $budgetFloorFactors = [
-        1 => 0.8,
-        2 => 1.0,
-        3 => 1.2,
-    ];
-    // Trần giá theo ngân sách (vd: tiết kiệm ~<=110%, tiêu chuẩn ~<=130%, nâng cao ~<=160%)
-$budgetCeilingFactors = [
-    1 => 1.10,
-    2 => 1.30,
-    3 => 1.60,
-];
-
-
     if ($isUnknownHotelLvl) {
         $slots = [
-            ['hotel_level' => 'Khách sạn 2–3 sao',            'package_index' => 1, 'code_suffix' => 'A'],
-            ['hotel_level' => 'Khách sạn 2–3 sao',            'package_index' => 2, 'code_suffix' => 'B'],
-            ['hotel_level' => 'Khách sạn 3–4 sao',            'package_index' => 1, 'code_suffix' => 'C'],
-            ['hotel_level' => 'Khách sạn 3–4 sao',            'package_index' => 2, 'code_suffix' => 'D'],
-            ['hotel_level' => 'Resort / 4–5 sao',             'package_index' => 1, 'code_suffix' => 'E'],
-            ['hotel_level' => 'Resort / 4–5 sao',             'package_index' => 2, 'code_suffix' => 'F'],
-            ['hotel_level' => 'Resort / 4–5 sao (cao cấp)',   'package_index' => 3, 'code_suffix' => 'G'],
+            ['hotel_level' => 'Khách sạn 2–3 sao',          'package_index' => 1, 'code_suffix' => 'A'],
+            ['hotel_level' => 'Khách sạn 2–3 sao',          'package_index' => 2, 'code_suffix' => 'B'],
+            ['hotel_level' => 'Khách sạn 3–4 sao',          'package_index' => 1, 'code_suffix' => 'C'],
+            ['hotel_level' => 'Khách sạn 3–4 sao',          'package_index' => 2, 'code_suffix' => 'D'],
+            ['hotel_level' => 'Resort / 4–5 sao',           'package_index' => 1, 'code_suffix' => 'E'],
+            ['hotel_level' => 'Resort / 4–5 sao',           'package_index' => 2, 'code_suffix' => 'F'],
+            ['hotel_level' => 'Resort / 4–5 sao (cao cấp)', 'package_index' => 3, 'code_suffix' => 'G'],
         ];
     } else {
         $slots = [
@@ -725,19 +796,26 @@ $budgetCeilingFactors = [
         ];
     }
 
-    // Tour riêng: áp hệ số
-    $privateMultiplier = 1;
-    if ($tourType === 'private') {
-        if ($totalPeople < 4) {
-            $privateMultiplier = 2;
-        } elseif ($totalPeople > 10) {
-            $privateMultiplier = 1;
+    // Hệ số tour tự thiết kế (áp dụng cho TẤT CẢ tour tự thiết kế)
+    // Tour cá nhân = 1 người, Tour đoàn = 2 người trở lên
+    $privateMultiplier = 1.0;
+    
+    // Áp dụng hệ số cho tất cả tour tự thiết kế (không phân biệt private hay group)
+    if ($totalPeople === 1) {
+        // Tour cá nhân (1 người)
+        $privateMultiplier = 1.5;   // 1 người → đắt hơn
+    } elseif ($totalPeople >= 2 && $totalPeople <= 3) {
+        // Tour đoàn 2-3 người
+        $privateMultiplier = 1.5;   // 2-3 người → phụ thu nhẹ
+    } elseif ($totalPeople >= 4 && $totalPeople <= 9) {
+        // Tour đoàn 4-9 người
+        $privateMultiplier = 1.2;   // 4-9 người → không phụ thu
         } else {
-            $privateMultiplier = 1.5;
-        }
+        // Tour đoàn >= 10 người
+        $privateMultiplier = 1.0;   // >= 10 người → không phụ thu
     }
 
-    // Giảm giá tour đoàn
+    // Giảm giá tour đoàn (đã có sẵn hàm calculateGroupDiscountFactor)
     $groupDiscountFactor  = $this->calculateGroupDiscountFactor($totalPeople, $tourType);
     $groupDiscountPercent = (int) round((1 - $groupDiscountFactor) * 100);
 
@@ -748,49 +826,83 @@ $budgetCeilingFactors = [
         $packageIndex = $slot['package_index'];
         $pkgMeta      = $packageMeta[$packageIndex];
 
-        $optionCode   = $requestCode . '-' . $slot['code_suffix'];
-        $optionHotel  = $slot['hotel_level'];
+        $optionCode  = $requestCode . '-' . $slot['code_suffix'];
+        $optionHotel = $slot['hotel_level'];
 
-        // Tiền khách sạn theo từng option (giống cũ)
+        // 1️⃣ Khách sạn / người (dùng helper cũ)
         $hotelCostPerPerson = $this->estimateHotelCostPerPerson($optionHotel, $nights);
 
-        // Chi phí trước khi nhân gói + tour riêng
-        $undiscounted = $baseCostPerPersonRaw + $hotelCostPerPerson;
+        // 2️⃣ Core cost / người (đúng nghĩa: khách sạn + ăn + đi lại + vé tham quan)
+        $coreCostPerPerson = $mandatoryActCost      // vé tham quan chính (đã áp placeFactor phía trên)
+            + $foodCostPerPerson                    // ăn uống
+            + $transportCostPerPerson               // di chuyển nội bộ
+            + $hotelCostPerPerson;                  // khách sạn
 
-        // Sàn & trần giá theo ngân sách (trước giảm đoàn)
-$floorBase = $baseBudget * ($budgetFloorFactors[$packageIndex] ?? 1.0) * $privateMultiplier;
+        // 3️⃣ Phí dịch vụ cơ bản (tính trên coreCost, chưa tính hệ số tour riêng)
+        $baseServiceFeePerPerson = (int) round($coreCostPerPerson * $serviceFeeRate / 1000) * 1000;
+        
+        // 4️⃣ Phụ thu cao điểm (nếu có)
+        $surchargePerPerson  = ($highSeasonRate > 0)
+            ? (int) round($coreCostPerPerson * $highSeasonRate / 1000) * 1000
+            : 0;
 
-$ceilFactor  = $budgetCeilingFactors[$packageIndex] ?? 1.30;
-$ceilingBase = $baseBudget * $ceilFactor * $privateMultiplier;
+        // 5️⃣ Phí tour tự thiết kế (tính như một phần của phí dịch vụ)
+        // Phí tour tự thiết kế = Core cost × (privateMultiplier - 1) nếu có hệ số > 1.0
+        // Áp dụng cho TẤT CẢ tour tự thiết kế (không phân biệt private hay group)
+        $privateTourFeePerPerson = 0;
+        if ($privateMultiplier > 1.0) {
+            $privateTourFeePerPerson = (int) round($coreCostPerPerson * ($privateMultiplier - 1.0) / 1000) * 1000;
+        }
 
-$undiscountedOption = $undiscounted * $pkgMeta['multiplier'] * $privateMultiplier;
+        // 6️⃣ Tổng phí dịch vụ / điều hành tour (bao gồm phí dịch vụ + phí tour riêng)
+        $serviceFeePerPerson = $baseServiceFeePerPerson + $privateTourFeePerPerson;
 
-// Giữ giá trong khoảng [floorBase ; ceilingBase]
-$undiscountedFinal = min(
-    max($undiscountedOption, $floorBase),
-    $ceilingBase
-);
+        // 7️⃣ Áp hệ số gói (KHÔNG áp hệ số tour riêng nữa vì đã tính vào phí dịch vụ)
+        $coreCostAfterPackage = (int) round($coreCostPerPerson * $pkgMeta['multiplier'] / 1000) * 1000;
+        $serviceFeeAfterPackage = (int) round($serviceFeePerPerson * $pkgMeta['multiplier'] / 1000) * 1000;
+        $surchargeAfterPackage = ($surchargePerPerson > 0)
+            ? (int) round($surchargePerPerson * $pkgMeta['multiplier'] / 1000) * 1000
+            : 0;
 
+        // 8️⃣ Tổng chi phí gốc / người (sau hệ số gói, trước giảm đoàn)
+        $baseCostPerPerson = $coreCostAfterPackage
+            + $serviceFeeAfterPackage
+            + $surchargeAfterPackage;
 
-        // 👉 Giá người lớn sau giảm giá đoàn
-        $pricePerAdult = (int) round($undiscountedFinal * $groupDiscountFactor / 1000) * 1000;
+        // Đây là giá gốc / người TRƯỚC khi giảm ưu đãi đoàn
+        $baseBeforeDiscountPerPerson = $baseCostPerPerson;
+        
+        // Giữ lại giá trị để hiển thị trong breakdown
+        // coreCostAfterMultiplier sẽ được tính lại từ tổng 4 mục sau hệ số gói
+        $serviceFeeAfterMultiplier = $serviceFeeAfterPackage;
+        $surchargeAfterMultiplier = $surchargeAfterPackage;
 
-        // 👉 Giá trẻ em
+        // 6️⃣ Áp ưu đãi tour đoàn (chiết khấu % theo số khách)
+        $pricePerAdult = (int) round(
+            $baseBeforeDiscountPerPerson * $groupDiscountFactor / 1000
+        ) * 1000;
+        $discountAmountPerAdult = $baseBeforeDiscountPerPerson - $pricePerAdult;
+
+        // 7️⃣ Giá trẻ em
         $pricePerChild = (int) round($pricePerAdult * $childFactor / 1000) * 1000;
 
-        // Tổng tiền
+        // 8️⃣ Tổng tiền
         $totalAdultsPrice   = $pricePerAdult * $adults;
         $totalChildrenPrice = $pricePerChild * $children;
         $totalPrice         = $totalAdultsPrice + $totalChildrenPrice;
 
-        // Lịch trình + hotelPerNight như cũ ...
+        // Tổng tour nếu KHÔNG giảm đoàn
+        $undiscountedTotal   = (int) round($baseBeforeDiscountPerPerson * $totalPeople / 1000) * 1000;
+        $discountAmountTotal = $undiscountedTotal - $totalPrice;
+
+        // 9️⃣ Lịch trình & optional theo từng gói
         $itineraryForOption = $this->enrichItineraryForPackage($baseItinerary, $packageIndex, $intensity);
 
         $hotelPerNight = $nights > 0
             ? (int) round($hotelCostPerPerson / $nights / 1000) * 1000
             : $hotelCostPerPerson;
 
-        // Điều chỉnh optional cho option (giữ nguyên như bạn đang dùng)
+        // Optional activities: chỉ để hiển thị, không cộng vào giá tour
         $optionalsForOption = [];
         foreach ($optionalActivities as $opt) {
             $priceOpt = (int) round(($opt['price_per_person'] ?? 0) / 1000) * 1000;
@@ -803,36 +915,61 @@ $undiscountedFinal = min(
             ];
         }
 
-        // Tạm tính trước ưu đãi (theo 1 người lớn, chưa giảm đoàn)
-        $baseSubtotalPerPerson = (int) round($undiscountedFinal / $groupDiscountFactor / 1000) * 1000;
-
-        // ---- BREAKDOWN CHI PHÍ CHO VIEW ----
+        // 🔍 BREAKDOWN cho view
+        // Tính các giá trị sau hệ số gói (không nhân hệ số tour riêng) để hiển thị
+        $hotelCostAfterPackage = (int) round($hotelCostPerPerson * $pkgMeta['multiplier'] / 1000) * 1000;
+        $foodCostAfterPackage = (int) round($foodCostPerPerson * $pkgMeta['multiplier'] / 1000) * 1000;
+        $activityCostAfterPackage = (int) round($mandatoryActCost * $pkgMeta['multiplier'] / 1000) * 1000;
+        $transportCostAfterPackage = (int) round($transportCostPerPerson * $pkgMeta['multiplier'] / 1000) * 1000;
+        
+        // Tổng chi phí dịch vụ gốc = tổng 4 mục sau hệ số gói (chưa nhân hệ số tour riêng)
+        $coreCostAfterMultiplier = $hotelCostAfterPackage + $foodCostAfterPackage + $activityCostAfterPackage + $transportCostAfterPackage;
+        
         $priceBreakdown = [
-            'activity_per_person'        => $mandatoryActCost,
-            'hotel_per_person'           => $hotelCostPerPerson,
+            // Chi phí cơ bản / người (sau hệ số gói, chưa nhân hệ số tour riêng)
+            'activity_per_person'        => $activityCostAfterPackage,
+            'hotel_per_person'           => $hotelCostAfterPackage,
             'hotel_per_night'            => $hotelPerNight,
-            'food_per_person'            => $foodCostPerPerson,
-            'transport_per_person'       => $transportCostPerPerson,
+            'food_per_person'            => $foodCostAfterPackage,
+            'transport_per_person'       => $transportCostAfterPackage,
 
-            // NEW: Phí dịch vụ & phụ thu
+            // Phí dịch vụ & phụ thu (giá trị gốc trước khi nhân hệ số - để tham khảo)
+            'base_service_fee_per_person' => $baseServiceFeePerPerson,
+            'private_tour_fee_per_person' => $privateTourFeePerPerson,
             'service_fee_per_person'     => $serviceFeePerPerson,
             'surcharge_per_person'       => $surchargePerPerson,
-            'service_fee_rate_percent'   => (int)($serviceFeeRate * 100),
-            'high_season_rate_percent'   => (int)($highSeasonRate * 100),
+            // Phí dịch vụ & phụ thu SAU KHI nhân hệ số gói (để hiển thị trong breakdown)
+            'service_fee_after_multiplier' => $serviceFeeAfterMultiplier,
+            'surcharge_after_multiplier'   => $surchargeAfterMultiplier,
+            'core_cost_after_multiplier'   => $coreCostAfterMultiplier,
+            'service_fee_rate_percent'   => (int) ($serviceFeeRate * 100),
+            'high_season_rate_percent'   => (int) ($highSeasonRate * 100),
+            'private_multiplier'         => $privateMultiplier,
+            'is_private_tour'            => ($tourType === 'private'),
 
-            'base_subtotal_per_person'   => $baseSubtotalPerPerson,
+            // Tổng / người
+            'core_cost_per_person'            => $coreCostPerPerson,
+            'base_before_discount_per_person' => $baseBeforeDiscountPerPerson,
+            'discount_amount_per_adult'       => $discountAmountPerAdult,
+
+            // Thông tin gói + hệ số
             'package_name'               => $pkgMeta['suffix'],
             'package_multiplier'         => $pkgMeta['multiplier'],
             'private_multiplier'         => $privateMultiplier,
             'group_discount_percent'     => $groupDiscountPercent,
             'group_discount_factor'      => $groupDiscountFactor,
 
+            // Giá cuối cùng
             'adult_price'                => $pricePerAdult,
             'child_price'                => $pricePerChild,
             'child_factor'               => $childFactor,
             'total_price_adults'         => $totalAdultsPrice,
             'total_price_children'       => $totalChildrenPrice,
             'final_total_price'          => $totalPrice,
+
+            // Tổng tour (trước & sau ưu đãi)
+            'undiscounted_total'         => $undiscountedTotal,
+            'discount_amount_total'      => $discountAmountTotal,
 
             'optionals'                  => $optionalsForOption,
         ];
@@ -858,197 +995,6 @@ $undiscountedFinal = min(
 
             'highlights'             => $must,
             'itinerary'              => $itineraryForOption,
-            'group_discount_percent' => $groupDiscountPercent,
-            'price_breakdown'        => $priceBreakdown,
-        ];
-    }
-
-    return $options;
-}
-
-
-/**
- * Fallback đơn giản nếu chưa có dữ liệu tbl_places
- */
-protected function generateSimpleOptionsFallback(array $requestData, string $requestCode): array
-{
-    $days        = $requestData['days'];
-    $nights      = $requestData['nights'];
-    $destStr     = implode(' – ', $requestData['main_destinations']);
-    $main        = $requestData['main_destinations'][0] ?? 'Hành trình';
-    $must        = $requestData['must_visit_places'];
-    $adults      = (int) ($requestData['adults'] ?? 1);
-    $children    = (int) ($requestData['children'] ?? 0);
-    $totalPeople = max($adults + $children, 1);
-    $baseBudget  = $requestData['budget_per_person'];
-    $hotelLevel  = $requestData['hotel_level'];
-    $tourType    = $requestData['tour_type'] ?? 'group';
-    $intensity   = $requestData['intensity'];
-
-    // Hệ số giá trẻ em
-    $childFactor = 0.75;
-
-    // Gói: 1 tiết kiệm, 2 tiêu chuẩn, 3 nâng cao
-    // 👉 Dùng chung cấu hình với generateTourOptions
-    $packageMeta = [
-        1 => ['suffix' => 'Gói tiết kiệm',  'multiplier' => 0.8],
-        2 => ['suffix' => 'Gói tiêu chuẩn', 'multiplier' => 1.0],
-        3 => ['suffix' => 'Gói nâng cao',   'multiplier' => 1.15],
-    ];
-
-    // Sàn giá tối thiểu dựa theo budget cho từng gói
-    $budgetFloorFactors = [
-        1 => 0.8,
-        2 => 1.0,
-        3 => 1.2,
-    ];
-
-    $hotelLevelLower   = mb_strtolower($hotelLevel);
-    $isUnknownHotelLvl = $hotelLevel === '' ||
-        str_contains($hotelLevelLower, 'chưa biết') ||
-        str_contains($hotelLevelLower, 'unknown');
-
-    if ($isUnknownHotelLvl) {
-        $slots = [
-            ['hotel_level' => 'Khách sạn 2–3 sao',             'package_index' => 1, 'code_suffix' => 'A'],
-            ['hotel_level' => 'Khách sạn 2–3 sao',             'package_index' => 2, 'code_suffix' => 'B'],
-            ['hotel_level' => 'Khách sạn 3–4 sao',             'package_index' => 1, 'code_suffix' => 'C'],
-            ['hotel_level' => 'Khách sạn 3–4 sao',             'package_index' => 2, 'code_suffix' => 'D'],
-            ['hotel_level' => 'Resort / 4–5 sao',              'package_index' => 1, 'code_suffix' => 'E'],
-            ['hotel_level' => 'Resort / 4–5 sao',              'package_index' => 2, 'code_suffix' => 'F'],
-            ['hotel_level' => 'Resort / 4–5 sao (cao cấp)',    'package_index' => 3, 'code_suffix' => 'G'],
-        ];
-    } else {
-        $slots = [
-            ['hotel_level' => $hotelLevel, 'package_index' => 1, 'code_suffix' => 'A'],
-            ['hotel_level' => $hotelLevel, 'package_index' => 2, 'code_suffix' => 'B'],
-            ['hotel_level' => $hotelLevel, 'package_index' => 3, 'code_suffix' => 'C'],
-        ];
-    }
-
-    // Hệ số tour riêng
-    $privateMultiplier = 1;
-    if ($tourType === 'private') {
-        if ($totalPeople < 4) {
-            $privateMultiplier = 2;
-        } elseif ($totalPeople > 10) {
-            $privateMultiplier = 1;
-        } else {
-            $privateMultiplier = 1.5;
-        }
-    }
-
-    // Hệ số giảm giá đoàn
-    $groupDiscountFactor  = $this->calculateGroupDiscountFactor($totalPeople, $tourType);
-    $groupDiscountPercent = (int) round((1 - $groupDiscountFactor) * 100);
-
-    $options = [];
-    foreach ($slots as $index => $slot) {
-        $packageIndex = $slot['package_index'];
-        $pkgMeta      = $packageMeta[$packageIndex];
-
-        $optionCode = $requestCode . '-' . $slot['code_suffix'];
-
-        // Giá từ budget (dạng fallback) – coi như giá người lớn
-        $multiplier         = $pkgMeta['multiplier'];
-        $floorFactorBase    = $budgetFloorFactors[$packageIndex] ?? 1.0;
-
-        $priceFromDataBase  = $baseBudget * $multiplier * $privateMultiplier;
-        $priceFromData      = $priceFromDataBase * $groupDiscountFactor;
-
-        $minFromBudgetBase  = $baseBudget * $floorFactorBase * $privateMultiplier;
-        $minFromBudget      = $minFromBudgetBase * $groupDiscountFactor;
-
-        // 👉 Giá người lớn / người
-        $pricePerAdult = (int) round(max($priceFromData, $minFromBudget) / 1000) * 1000;
-
-        // 👉 Giá trẻ em
-        $pricePerChild = (int) round($pricePerAdult * $childFactor / 1000) * 1000;
-
-        // Tổng
-        $totalAdultsPrice   = $pricePerAdult * $adults;
-        $totalChildrenPrice = $pricePerChild * $children;
-        $totalPrice         = $totalAdultsPrice + $totalChildrenPrice;
-
-        // Tách ước lượng các thành phần chi phí từ pricePerAdult
-        // (do không có dữ liệu places nên chia theo tỷ lệ ước lượng)
-        $activityCostPerPerson  = (int) round($pricePerAdult * 0.20 / 1000) * 1000;
-        $hotelCostPerPerson     = (int) round($pricePerAdult * 0.40 / 1000) * 1000;
-        $foodCostPerPerson      = (int) round($pricePerAdult * 0.25 / 1000) * 1000;
-        $transportCostPerPerson = (int) round($pricePerAdult * 0.15 / 1000) * 1000;
-
-        $hotelPerNight = $nights > 0
-            ? (int) round($hotelCostPerPerson / $nights / 1000) * 1000
-            : $hotelCostPerPerson;
-
-        $priceBreakdown = [
-            'activity_per_person'       => $activityCostPerPerson,
-            'hotel_per_person'          => $hotelCostPerPerson,
-            'hotel_per_night'           => $hotelPerNight,
-            'food_per_person'           => $foodCostPerPerson,
-            'transport_per_person'      => $transportCostPerPerson,
-            'base_subtotal_per_person'  => $activityCostPerPerson + $hotelCostPerPerson + $foodCostPerPerson + $transportCostPerPerson,
-            'package_name'              => $pkgMeta['suffix'],
-            'package_multiplier'        => $pkgMeta['multiplier'],
-            'private_multiplier'        => $privateMultiplier,
-            'group_discount_percent'    => $groupDiscountPercent,
-            'group_discount_factor'     => $groupDiscountFactor,
-
-            'adult_price'               => $pricePerAdult,
-            'child_price'               => $pricePerChild,
-            'child_factor'              => $childFactor,
-            'total_price_adults'        => $totalAdultsPrice,
-            'total_price_children'      => $totalChildrenPrice,
-            'final_total_price'         => $totalPrice,
-        ];
-
-        // Lịch trình đơn giản nhưng gói nâng cao sẽ chi tiết hơn
-        $itinerary = [];
-        for ($d = 1; $d <= $days; $d++) {
-            $dayLabel = 'Ngày ' . $d;
-            if ($d == 1) {
-                $desc = 'Đón khách tại điểm hẹn, di chuyển đến ' . $main . ', nhận phòng và tham quan xung quanh.';
-            } elseif ($d == $days) {
-                $desc = 'Tự do tham quan, mua sắm. Trả phòng và khởi hành về điểm ban đầu.';
-            } else {
-                $slice = array_slice($must, ($d - 2) * 2, 2);
-                $desc = empty($slice)
-                    ? 'Tham quan các điểm nổi bật, nghỉ ngơi và khám phá ẩm thực địa phương.'
-                    : 'Tham quan: ' . implode(', ', $slice) . '.';
-            }
-
-            // thêm mô tả cho gói 2,3
-            if ($packageIndex === 2) {
-                $desc .= ' Lịch trình tiêu chuẩn: sắp xếp 2–3 điểm tham quan chính, phù hợp gia đình/nhóm nhỏ.';
-            } elseif ($packageIndex === 3) {
-                $desc .= ' Lịch trình nâng cao: thêm điểm tham quan/hoạt động trải nghiệm, thời lượng trong ngày có thể 7–9 giờ dành cho khách thích đi nhiều.';
-            }
-
-            $itinerary[] = [
-                'day'         => $dayLabel,
-                'description' => $desc,
-            ];
-        }
-
-        $options[] = [
-            'option_index'           => $index + 1,
-            'code'                   => $optionCode,
-            'title'                  => sprintf('%s %dN%dĐ – %s', $destStr, $days, $nights, $pkgMeta['suffix']),
-            'hotel_level'            => $slot['hotel_level'],
-            'intensity'              => $intensity,
-            'tour_type'              => $tourType, // 'group' / 'private'
-            'days'                   => $days,
-            'nights'                 => $nights,
-            'total_people'           => $totalPeople,
-
-            'price_per_adult'        => $pricePerAdult,
-            'price_per_child'        => $pricePerChild,
-            'total_price_adults'     => $totalAdultsPrice,
-            'total_price_children'   => $totalChildrenPrice,
-            'total_price'            => $totalPrice,
-
-            'highlights'             => $must,
-            'itinerary'              => $itinerary,
             'group_discount_percent' => $groupDiscountPercent,
             'price_breakdown'        => $priceBreakdown,
         ];
@@ -1266,58 +1212,189 @@ public function buildPriceBreakdown($tour, $userOptions)
     ];
 }
 
-public function checkout()
+public function checkoutCustomTour($id, Request $request)
 {
-    // Lấy tour đã chọn từ SESSION
-    $chosenTour = Session::get('chosen_tour');
+    // 1. Lấy phương án tour đã lưu trong tbl_custom_tours
+    $customTour = DB::table('tbl_custom_tours')->where('id', $id)->first();
 
-    if (!$chosenTour) {
-        return redirect()->route('build-tour.form')
-            ->with('error', 'Bạn chưa chọn phương án tour!');
+    if (!$customTour) {
+        return redirect()
+            ->route('build-tour.result')
+            ->with('error', 'Phương án tour đã chọn không tồn tại hoặc đã bị xoá.');
     }
 
-    $title = "Đặt tour theo yêu cầu";
-    $user = auth()->user();
+    // 2. Giải mã option_json để lấy chi tiết lịch trình, giá...
+    $option = json_decode($customTour->option_json, true) ?? [];
 
-    return view('clients.build_tour_checkout', compact('chosenTour', 'user', 'title'));
+    // 3. Lấy price_breakdown từ JSON nếu có
+    $priceSummary = $option['price_breakdown'] ?? [];
+
+    // 4. Gộp dữ liệu vào $chosenTour để đẩy ra view
+    $chosenTour = $option;
+
+    // Đảm bảo price_breakdown luôn có đầy đủ giá trị và đồng bộ với total_price
+    // Ưu tiên tổng tiền từ breakdown, fallback sang estimated_cost nếu thiếu
+    if (!empty($priceSummary) && isset($priceSummary['final_total_price'])) {
+        $chosenTour['total_price'] = $priceSummary['final_total_price'];
+        // Đồng bộ lại các giá trị khác từ breakdown để đảm bảo nhất quán
+        if (isset($priceSummary['adult_price'])) {
+            $chosenTour['price_per_adult'] = $priceSummary['adult_price'];
+        }
+        if (isset($priceSummary['child_price'])) {
+            $chosenTour['price_per_child'] = $priceSummary['child_price'];
+        }
+        if (isset($priceSummary['total_price_adults'])) {
+            $chosenTour['total_price_adults'] = $priceSummary['total_price_adults'];
+        }
+        if (isset($priceSummary['total_price_children'])) {
+            $chosenTour['total_price_children'] = $priceSummary['total_price_children'];
+        }
+    } else {
+        $chosenTour['total_price'] = $customTour->estimated_cost ?? 0;
+    }
+    
+    // Đảm bảo optional_activities_total được truyền vào priceSummary nếu có
+    if (isset($chosenTour['optional_activities_total']) && $chosenTour['optional_activities_total'] > 0) {
+        if (!isset($priceSummary['optional_activities_total'])) {
+            $priceSummary['optional_activities_total'] = $chosenTour['optional_activities_total'];
+        }
+    }
+    
+    // Đảm bảo price_breakdown luôn được truyền vào view (ưu tiên từ option)
+    if (empty($priceSummary) && isset($chosenTour['price_breakdown']) && !empty($chosenTour['price_breakdown'])) {
+        $priceSummary = $chosenTour['price_breakdown'];
+    }
+
+    // Bổ sung các field lấy từ DB
+    $chosenTour['adults']        = $customTour->adults;
+    $chosenTour['children']      = $customTour->children;
+    $chosenTour['total_people']  = $customTour->total_people;
+    $chosenTour['destination']   = $customTour->destination;
+    $chosenTour['days']          = $customTour->days;
+    $chosenTour['nights']        = $customTour->nights;
+    $chosenTour['hotel_level']   = $customTour->hotel_level;
+    $chosenTour['tour_type']     = $customTour->tour_type;
+
+    // Ngày đi / về: dùng đúng dữ liệu đã lưu trong DB
+    $chosenTour['start_date']    = $customTour->start_date;
+    $chosenTour['end_date']      = $customTour->end_date;
+
+    $title = 'Đặt tour theo yêu cầu';
+    
+    // Lấy thông tin user để tự động điền form
+    $user = null;
+    if (session()->has('username')) {
+        $userId = $request->session()->get('userId');
+        if (!$userId) {
+            $username = session()->get('username');
+            $userModel = new \App\Models\clients\User();
+            $userId = $userModel->getUserId($username);
+            $request->session()->put('userId', $userId);
+        }
+        if ($userId) {
+            $userModel = new \App\Models\clients\User();
+            $user = $userModel->getUser($userId);
+        }
+    }
+
+    // Lưu id custom tour vào session để dùng lại khi submit
+    Session::put('custom_tour_checkout_id', $customTour->id);
+    $customTourId = $customTour->id;
+
+    return view('clients.build_tour_checkout', compact(
+        'chosenTour',
+        'priceSummary',
+        'user',
+        'title',
+        'customTourId'
+    ));
 }
-public function submitCheckout(Request $request)
+
+
+public function submitCustomTourBooking($id, Request $request)
 {
+    // 1. Validate dữ liệu form
     $request->validate([
         'full_name' => 'required|string|max:255',
-        'phone' => 'required|string|max:20',
-        'email' => 'required|email|max:255',
-        'note' => 'nullable|string|max:1000',
+        'phone'     => 'required|string|max:20',
+        'email'     => 'required|email|max:255',
+        'address'   => 'nullable|string|max:255',
+        'note'      => 'nullable|string|max:1000',
+    ], [
+        'full_name.required' => 'Vui lòng nhập họ tên.',
+        'phone.required'     => 'Vui lòng nhập số điện thoại.',
+        'email.required'     => 'Vui lòng nhập email.',
+        'email.email'        => 'Email không đúng định dạng.',
     ]);
 
-    $chosenTour = Session::get('chosen_tour');
+    // 2. Lấy lại custom tour từ DB
+    $customTour = DB::table('tbl_custom_tours')->where('id', $id)->first();
 
-    if (!$chosenTour) {
-        return redirect()->route('build-tour.form')
-            ->with('error', 'Không tìm thấy phương án tour!');
+    if (!$customTour) {
+        return redirect()
+            ->route('build-tour.result')
+            ->with('error', 'Không tìm thấy phương án tour. Vui lòng chọn lại.');
     }
 
-    // Tạo booking như tour bình thường
-    $booking = DB::table('tbl_booking')->insert([
-        'user_id' => auth()->id(),
-        'tour_code' => $chosenTour['code'] ?? null,
-        'tour_title' => $chosenTour['title'] ?? 'Tour theo yêu cầu',
-        'start_date' => $chosenTour['start_date'] ?? null,
-        'total_price' => $chosenTour['total_price'] ?? 0,
+    // 3. Lấy userId theo session (đúng với chooseTour)
+    $userId = $request->session()->get('userId');
 
-        'full_name' => $request->full_name,
-        'phone' => $request->phone,
-        'email' => $request->email,
-        'note' => $request->note,
+    // 4. Số người & tổng tiền
+    $numAdults   = $customTour->adults ?? $customTour->total_people ?? 1;
+    $numChildren = $customTour->children ?? 0;
 
-        'status' => 'pending',
-        'created_at' => now(),
-        'updated_at' => now(),
-    ]);
+    // Lấy lại JSON để ưu tiên final_total_price
+    $option       = json_decode($customTour->option_json, true) ?? [];
+    $priceSummary = $option['price_breakdown'] ?? [];
 
-    return redirect()->route('tour-booked')
-        ->with('success', 'Đặt tour theo yêu cầu thành công!');
+    $totalPrice = $priceSummary['final_total_price']
+        ?? ($customTour->estimated_cost ?? 0);
+
+    // 5. Insert vào tbl_booking
+    // Với custom tour, không insert tourId (để NULL) vì chỉ cần custom_tour_id
+    $bookingData = [
+        'custom_tour_id' => $customTour->id,
+        'userId'         => $userId,
+        'fullName'       => $request->full_name,
+        'email'          => $request->email,
+        'phoneNumber'    => $request->phone,
+        'address'        => $request->address ?? '',
+        'bookingDate'    => now(),
+        'numAdults'      => $numAdults,
+        'numChildren'    => $numChildren,
+        'totalPrice'     => $totalPrice,
+        // theo hệ thống của bạn: 'b' = booked (đặt mới), 'y' = confirmed
+        'bookingStatus'  => 'b',
+    ];
+    
+    // Chỉ thêm paymentMethod và paymentStatus nếu cột tồn tại trong bảng
+    // Kiểm tra bằng cách thử insert và catch exception, hoặc chỉ insert các cột cơ bản
+    try {
+        // Thử insert với paymentMethod/paymentStatus
+        if ($request->has('payment')) {
+            $bookingData['paymentMethod'] = $request->payment;
+        }
+        $bookingData['paymentStatus'] = 'n'; // 'n' = chưa thanh toán
+        
+        $bookingId = DB::table('tbl_booking')->insertGetId($bookingData);
+    } catch (\Illuminate\Database\QueryException $e) {
+        // Nếu lỗi do cột không tồn tại, thử lại không có paymentMethod/paymentStatus
+        if (str_contains($e->getMessage(), 'Unknown column')) {
+            unset($bookingData['paymentMethod']);
+            unset($bookingData['paymentStatus']);
+            $bookingId = DB::table('tbl_booking')->insertGetId($bookingData);
+        } else {
+            // Nếu lỗi khác, throw lại
+            throw $e;
+        }
+    }
+
+    // 6. Xoá session id checkout (nếu muốn)
+    Session::forget('custom_tour_checkout_id');
+
+    // 7. Redirect đến trang tour-booked với bookingId (custom tour không có checkoutId)
+    return redirect()->route('tour-booked', ['bookingId' => $bookingId])
+        ->with('success', 'Bạn đã đặt tour theo yêu cầu thành công! Chúng tôi sẽ liên hệ xác nhận trong thời gian sớm nhất.');
 }
-
 
 }

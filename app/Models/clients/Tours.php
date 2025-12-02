@@ -145,14 +145,81 @@ class Tours extends Model
     }
 
     //Lấy detail tour đã đặt
-    public function tourBooked($bookingId, $checkoutId)
+    public function tourBooked($bookingId, $checkoutId = null)
     {
-        $booked = DB::table($this->table)
-            ->join('tbl_booking', 'tbl_tours.tourId', '=', 'tbl_booking.tourId')
+        // Lấy booking - với custom tour có thể không có checkoutId
+        if ($checkoutId) {
+            // Tour thông thường: có cả bookingId và checkoutId
+        $booking = DB::table('tbl_booking')
             ->join('tbl_checkout', 'tbl_booking.bookingId', '=', 'tbl_checkout.bookingId')
             ->where('tbl_booking.bookingId', '=', $bookingId)
             ->where('tbl_checkout.checkoutId', '=', $checkoutId)
             ->first();
+        } else {
+            // Custom tour: chỉ cần bookingId
+            $booking = DB::table('tbl_booking')
+                ->where('tbl_booking.bookingId', '=', $bookingId)
+                ->first();
+        }
+
+        if (!$booking) {
+            return null;
+        }
+
+        // Kiểm tra xem là tour thông thường hay custom tour
+        if ($booking->tourId) {
+            // Tour thông thường - cần checkoutId
+            if (!$checkoutId) {
+                return null;
+            }
+            $booked = DB::table($this->table)
+                ->join('tbl_booking', 'tbl_tours.tourId', '=', 'tbl_booking.tourId')
+                ->join('tbl_checkout', 'tbl_booking.bookingId', '=', 'tbl_checkout.bookingId')
+                ->where('tbl_booking.bookingId', '=', $bookingId)
+                ->where('tbl_checkout.checkoutId', '=', $checkoutId)
+                ->first();
+        } else {
+            // Custom tour
+            $customTour = DB::table('tbl_custom_tours')
+                ->where('id', $booking->custom_tour_id)
+                ->first();
+
+            if (!$customTour) {
+                return null;
+            }
+
+            $option = json_decode($customTour->option_json, true) ?? [];
+            $priceBreakdown = $option['price_breakdown'] ?? [];
+
+            // Tạo object giống với tour thông thường để view có thể sử dụng
+            $booked = (object) [
+                'tourId' => 'CT-' . $customTour->id, // Mã custom tour
+                'title' => $option['title'] ?? 'Tour theo yêu cầu',
+                'description' => 'Tour được thiết kế theo yêu cầu của bạn',
+                'destination' => $option['destination'] ?? ($customTour->destination ?? 'Đang cập nhật'),
+                'startDate' => $customTour->start_date,
+                'endDate' => $customTour->end_date,
+                'time' => ($customTour->days ?? 0) . 'N' . ($customTour->nights ?? 0) . 'Đ',
+                'priceAdult' => $priceBreakdown['adult_price'] ?? ($customTour->price_per_adult ?? 0),
+                'priceChild' => $priceBreakdown['child_price'] ?? ($customTour->price_per_child ?? 0),
+                'numAdults' => $booking->numAdults,
+                'numChildren' => $booking->numChildren,
+                'totalPrice' => $booking->totalPrice,
+                'fullName' => $booking->fullName,
+                'email' => $booking->email,
+                'phoneNumber' => $booking->phoneNumber,
+                'address' => $booking->address,
+                'bookingStatus' => $booking->bookingStatus,
+                'paymentMethod' => $booking->paymentMethod ?? 'office-payment',
+                'paymentStatus' => $booking->paymentStatus ?? 'n',
+                'isCustomTour' => true, // Flag để view biết đây là custom tour
+            ];
+        }
+
+        // Kiểm tra nếu không tìm thấy booked
+        if (!$booked) {
+            return null;
+        }
 
         return $booked;
     }

@@ -148,6 +148,10 @@
 <script src="{{asset('clients/assets/js/custom-js.js')}}"></script>
 <script src="{{asset('clients/assets/js/jquery.datetimepicker.full.min.js')}}"></script>
 
+{{-- Chatbot AI --}}
+@include('components.chatbot-widget')
+<script src="{{ asset('js/chatbot-widget.js') }}" defer></script>
+
 </body>
 
 </html>

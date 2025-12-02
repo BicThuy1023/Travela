@@ -173,7 +173,10 @@
                         @php
                             $optionTourType = $option['tour_type'] ?? $tourTypeRaw;
                             $isGroupTour = $optionTourType === 'group';
-                            $discountPercent = (int)($option['group_discount_percent'] ?? 0);
+                            // Ưu tiên lấy từ price_breakdown để đồng nhất với các trang khác
+                            $priceBreakdown = $option['price_breakdown'] ?? [];
+                            $discountPercent = (int)($priceBreakdown['group_discount_percent'] 
+                                ?? ($option['group_discount_percent'] ?? 0));
                         @endphp
 
                         <div class="suggested-tour-item mb-3 p-3 p-md-4 bg-white rounded shadow-sm">
@@ -247,9 +250,35 @@
     <div class="mb-3">
         <strong>Giá dự kiến:</strong><br>
        @php
-    $adultPrice  = $option['price_per_adult'] ?? ($option['price_per_person'] ?? 0);
-    $childPrice  = $option['price_per_child'] ?? (int) round($adultPrice * 0.75 / 1000) * 1000;
-    $totalPrice  = $option['total_price'] ?? 0;
+    // BẮT BUỘC lấy từ price_breakdown để đồng nhất với checkout (giá đã được tính sẵn trong controller)
+    $priceBreakdown = $option['price_breakdown'] ?? [];
+    
+    // Nếu không có breakdown, fallback sang option (nhưng ưu tiên breakdown)
+    if (empty($priceBreakdown)) {
+        $priceBreakdown = [];
+    }
+    
+    $childFactor = $priceBreakdown['child_factor'] ?? 0.75;
+    
+    // Số khách từ requestData (giống checkout khi chưa lưu DB)
+    $adults = (int) ($requestData['adults'] ?? 1);
+    $children = (int) ($requestData['children'] ?? 0);
+    
+    // Giá người lớn: BẮT BUỘC lấy từ breakdown trước (đồng nhất với checkout)
+    $adultPrice = (isset($priceBreakdown['adult_price']) && $priceBreakdown['adult_price'] !== null && $priceBreakdown['adult_price'] !== '')
+        ? (int) $priceBreakdown['adult_price']
+        : (int) ($option['price_per_adult'] ?? ($option['price_per_person'] ?? 0));
+    
+    // Giá trẻ em: BẮT BUỘC lấy từ breakdown trước (đồng nhất với checkout)
+    $childPrice = (isset($priceBreakdown['child_price']) && $priceBreakdown['child_price'] !== null && $priceBreakdown['child_price'] !== '')
+        ? (int) $priceBreakdown['child_price']
+        : (int) ($option['price_per_child'] ?? (int) round($adultPrice * $childFactor / 1000) * 1000);
+    
+    // Tổng giá: BẮT BUỘC lấy final_total_price từ breakdown (đã được tính sẵn trong controller)
+    // Đây là giá chính xác nhất, không tính lại để tránh sai lệch
+    $totalPrice = (isset($priceBreakdown['final_total_price']) && $priceBreakdown['final_total_price'] !== null && $priceBreakdown['final_total_price'] !== '')
+        ? (int) $priceBreakdown['final_total_price']
+        : (int) ($option['total_price'] ?? 0);
 @endphp 
 <span class="tour-card-price d-block">
     {{ number_format($adultPrice, 0, ',', '.') }} đ / người lớn

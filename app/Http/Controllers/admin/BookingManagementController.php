@@ -77,16 +77,49 @@ class BookingManagementController extends Controller
         $bookingId = $request->input('bookingId');
         $email = $request->input('email');
         $title = 'Hóa đơn';
+        
         $invoice_booking = $this->booking->getInvoiceBooking($bookingId);
+        
+        if (!$invoice_booking) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Không tìm thấy thông tin đặt tour.',
+            ], 404);
+        }
 
-        if ($invoice_booking->transactionId == null) {
+        // Đảm bảo transactionId có giá trị
+        if (!isset($invoice_booking->transactionId) || $invoice_booking->transactionId == null) {
             $invoice_booking->transactionId = 'Thanh toán tại công ty Asia Travel';
+        }
+        
+        // Đảm bảo paymentDate có giá trị
+        if (!isset($invoice_booking->paymentDate) || $invoice_booking->paymentDate == null) {
+            $invoice_booking->paymentDate = date('d-m-Y', strtotime($invoice_booking->bookingDate));
+        }
+        
+        // Đảm bảo startDate có giá trị
+        if (!isset($invoice_booking->startDate) || $invoice_booking->startDate == null) {
+            $invoice_booking->startDate = $invoice_booking->bookingDate;
+        }
+        
+        // Đảm bảo amount có giá trị
+        if (!isset($invoice_booking->amount) || $invoice_booking->amount == null) {
+            $invoice_booking->amount = $invoice_booking->totalPrice ?? 0;
+        }
+        
+        // Đảm bảo discountAmount và undiscountedTotal có giá trị
+        if (!isset($invoice_booking->discountAmount)) {
+            $invoice_booking->discountAmount = 0;
+        }
+        if (!isset($invoice_booking->undiscountedTotal)) {
+            $invoice_booking->undiscountedTotal = $invoice_booking->totalPrice ?? 0;
         }
 
         try {
+            // Gửi email thật
             Mail::send('admin.emails.invoice', compact('invoice_booking'), function ($message) use ($invoice_booking) {
                 $message->to($invoice_booking->email)
-                    ->subject('Hóa đơn đặt tour của khách hàng' . $invoice_booking->fullName);
+                    ->subject('Hóa đơn đặt tour của khách hàng ' . $invoice_booking->fullName);
             });
 
             return response()->json([
@@ -94,6 +127,13 @@ class BookingManagementController extends Controller
                 'message' => 'Hóa đơn đã được gửi qua email thành công.',
             ]);
         } catch (\Exception $e) {
+            \Log::error('Error sending invoice email', [
+                'bookingId' => $bookingId,
+                'email' => $invoice_booking->email ?? 'N/A',
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+            
             return response()->json([
                 'success' => false,
                 'message' => 'Không thể gửi email: ' . $e->getMessage(),

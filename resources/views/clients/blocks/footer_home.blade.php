@@ -176,8 +176,9 @@
 {{--
 <script src="https://www.paypal.com/sdk/js?client-id={{ env('PAYPAL_SANDBOX_CLIENT_ID') }}"></script> --}}
 {{-- paypal-payment chỉ load ở trang thanh toán --}}
-@if (Route::is('createTransaction') || Route::is('processTransaction') || Route::is('successTransaction') || Route::is('cancelTransaction'))
-    <script src="https://www.paypal.com/sdk/js?client-id={{ env('PAYPAL_SANDBOX_CLIENT_ID') }}"></script>
+@if (Route::is('createTransaction') || Route::is('processTransaction') || Route::is('successTransaction') || Route::is('cancelTransaction') || Route::is('booking') || Route::is('build-tour.checkout') || Route::is('custom-tours.checkout'))
+    <script
+        src="https://www.paypal.com/sdk/js?client-id={{ env('PAYPAL_SANDBOX_CLIENT_ID') }}&currency=USD&intent=capture&locale=vi_VN&disable-funding=credit,card"></script>
 @endif
 
 
@@ -186,6 +187,10 @@
 <script src="{{ asset('clients/assets/js/jquery.datetimepicker.full.min.js') }}"></script>
 
 
+{{-- Chatbot AI --}}
+@include('components.chatbot-widget')
+
+<script src="{{ asset('js/chatbot-widget.js') }}" defer></script>
 </body>
 
 </html>

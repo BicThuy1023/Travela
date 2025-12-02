@@ -82,10 +82,30 @@
             <div class="summary-section">
                 <div>
                     <p>Mã tour : {{ $tour_booked->tourId }}</p>
-                    <input type="hidden" name="tourId" id="tourId" value="{{ $tour_booked->tourId }}">
+                    @if (isset($tour_booked->isCustomTour) && $tour_booked->isCustomTour)
+                        <input type="hidden" name="tourId" id="tourId" value="">
+                        <input type="hidden" name="isCustomTour" value="1">
+                    @else
+                        <input type="hidden" name="tourId" id="tourId" value="{{ $tour_booked->tourId }}">
+                    @endif
                     <h5 class="widget-title">{{ $tour_booked->title }}</h5>
-                    <p>Ngày khởi hành : {{ date('d-m-Y', strtotime($tour_booked->startDate)) }}</p>
-                    <p>Ngày kết thúc : {{ date('d-m-Y', strtotime($tour_booked->endDate)) }}</p>
+                    @if ($tour_booked->startDate)
+                        <p>Ngày khởi hành : {{ date('d-m-Y', strtotime($tour_booked->startDate)) }}</p>
+                    @else
+                        <p>Ngày khởi hành : Đang thỏa thuận</p>
+                    @endif
+                    @if ($tour_booked->endDate)
+                        <p>Ngày kết thúc : {{ date('d-m-Y', strtotime($tour_booked->endDate)) }}</p>
+                    @else
+                        <p>Ngày kết thúc : Đang thỏa thuận</p>
+                    @endif
+                    
+                    {{-- Hiển thị trạng thái thanh toán --}}
+                    @if (isset($tour_booked->paymentStatus) && $tour_booked->paymentStatus == 'n')
+                        <p class="text-warning"><strong>Trạng thái thanh toán: Chờ thanh toán</strong></p>
+                    @elseif (isset($tour_booked->paymentStatus) && $tour_booked->paymentStatus == 'y')
+                        <p class="text-success"><strong>Trạng thái thanh toán: Đã thanh toán</strong></p>
+                    @endif
                 </div>
 
                 <div class="order-summary" style="border-bottom: 1px solid #d6d6d6; margin-bottom:20px">
