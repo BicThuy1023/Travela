@@ -57,8 +57,9 @@ class User extends Model
             ->orderByDesc('tbl_booking.bookingDate')
             ->get();
 
+        // Custom tours: dùng leftJoin để bao gồm cả custom tours không có checkoutId (thanh toán tại văn phòng)
         $customTours = DB::table('tbl_booking')
-            ->join('tbl_checkout', 'tbl_booking.bookingId', '=', 'tbl_checkout.bookingId')
+            ->leftJoin('tbl_checkout', 'tbl_booking.bookingId', '=', 'tbl_checkout.bookingId')
             ->join('tbl_custom_tours', 'tbl_booking.custom_tour_id', '=', 'tbl_custom_tours.id')
             ->where('tbl_booking.userId', $id)
             ->whereNotNull('tbl_booking.custom_tour_id') // Chỉ lấy custom tours

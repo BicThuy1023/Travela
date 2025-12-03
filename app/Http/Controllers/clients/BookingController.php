@@ -223,8 +223,13 @@ class BookingController extends Controller
 
     public function createMomoPayment(Request $request)
     {
-        session()->put('tourId', $request->tourId);
+        // Lưu tourId vào session (cho cả normal tour và custom tour)
+        if ($request->has('tourId')) {
+            session()->put('tourId', $request->tourId);
+        }
+        
         if ($request->has('customTourId')) {
+            // Custom tour flow
             session()->put('customTourId', $request->customTourId);
             
             // Lưu thông tin form vào session để tự động lưu booking sau khi thanh toán thành công
@@ -232,12 +237,31 @@ class BookingController extends Controller
                 $formData = json_decode($request->form_data, true);
                 if ($formData) {
                     session()->put('momo_pending_booking_data', [
+                        'booking_type' => 'custom',
                         'custom_tour_id' => $request->customTourId,
                         'full_name' => $formData['full_name'] ?? '',
                         'email' => $formData['email'] ?? '',
                         'phone' => $formData['phone'] ?? '',
                         'address' => $formData['address'] ?? '',
                         'note' => $formData['note'] ?? '',
+                        'amount' => $request->amount ?? 0,
+                    ]);
+                }
+            }
+        } else if ($request->has('tourId')) {
+            // Normal tour flow - lưu thông tin form vào session
+            if ($request->has('form_data')) {
+                $formData = json_decode($request->form_data, true);
+                if ($formData) {
+                    session()->put('momo_pending_booking_data', [
+                        'booking_type' => 'normal',
+                        'tour_id' => $request->tourId,
+                        'full_name' => $formData['full_name'] ?? '',
+                        'email' => $formData['email'] ?? '',
+                        'phone' => $formData['phone'] ?? '',
+                        'address' => $formData['address'] ?? '',
+                        'numAdults' => $formData['numAdults'] ?? 1,
+                        'numChildren' => $formData['numChildren'] ?? 0,
                         'amount' => $request->amount ?? 0,
                     ]);
                 }
@@ -250,8 +274,8 @@ class BookingController extends Controller
         }
         
         try {
-            // Lấy giá từ request, nếu không có thì mặc định 0
-            $amount = (int) ($request->amount ?? 0);
+            // Lấy giá từ request, đảm bảo là số nguyên (không có decimal)
+            $amount = (int) round($request->amount ?? 0);
             
             if ($amount <= 0) {
                 return response()->json(['error' => 'Số tiền thanh toán không hợp lệ'], 400);
@@ -259,81 +283,286 @@ class BookingController extends Controller
     
             // Các thông tin cần thiết của MoMo
             $endpoint = "https://test-payment.momo.vn/v2/gateway/api/create";
-            $partnerCode = "MOMOBKUN20180529"; // mã partner của bạn
-            $accessKey = "klm05TvNBzhg7h7j"; // access key của bạn
-            $secretKey = "at67qH6mk8w5Y1nAyMoYKMWACiEi2bsa"; // secret key của bạn
+            $partnerCode = "MOMOBKUN20180529";
+            $accessKey = "klm05TvNBzhg7h7j";
+            $secretKey = "at67qH6mk8w5Y1nAyMoYKMWACiEi2bsa";
     
-            $orderInfo = "Thanh toán đơn hàng";
-            $requestId = time();
-            $orderId = time();
+            // Tạo orderInfo - đơn giản, không có ký tự đặc biệt, không có dấu tiếng Việt
+            if ($request->has('customTourId')) {
+                $orderInfo = "Tour custom " . $request->customTourId;
+            } else {
+                $orderInfo = "Tour " . ($request->tourId ?? 'NA');
+            }
+            
+            // Tạo orderId và requestId - đơn giản, giống custom tour flow
+            // Format: timestamp (số) + random 4 số = số nguyên dài
+            $timestamp = time();
+            $random1 = rand(1000, 9999);
+            $random2 = rand(1000, 9999);
+            
+            // Tạo số nguyên dài từ timestamp và random
+            $requestId = (string) ($timestamp * 10000 + $random1);
+            $orderId = (string) ($timestamp * 10000 + $random2);
+            
+            // Đảm bảo orderId và requestId khác nhau
+            if ($orderId === $requestId) {
+                $orderId = (string) ((int)$orderId + 1);
+            }
+            
             $extraData = "";
             
-            // Xác định redirect URL dựa trên loại tour
-            $baseUrl = config('app.url', 'http://127.0.0.1:8000');
+            // Xác định redirect URL - dùng route() để đảm bảo đúng host + port
+            // Redirect URL: nơi MoMo redirect user sau khi thanh toán (nhập OTP)
+            $redirectUrl = route('momo.return');
             
-            if ($request->has('customTourId')) {
-                $redirectUrl = route('custom-tours.checkout', ['id' => $request->customTourId]); // URL chuyển hướng cho custom tour
-                $ipnUrl = $baseUrl . '/momo-ipn'; // URL IPN riêng để xử lý webhook
-            } else {
-                $redirectUrl = $baseUrl . "/booking"; // URL chuyển hướng cho tour thông thường
-                $ipnUrl = $baseUrl . "/momo-ipn"; // URL IPN riêng để xử lý webhook
-            }
-            $requestType = 'payWithATM'; // Kiểu yêu cầu
+            // IPN URL: webhook từ MoMo để xử lý thanh toán (lưu booking vào DB)
+            $ipnUrl = route('momo.ipn');
+            
+            // Đảm bảo requestType là payWithATM cho NAPAS
+            $requestType = 'payWithATM';
     
-            // Tạo rawHash và chữ ký theo cách thủ công
-            $rawHash = "accessKey=" . $accessKey . 
-                       "&amount=" . $amount . 
-                       "&extraData=" . $extraData . 
-                       "&ipnUrl=" . $ipnUrl . 
-                       "&orderId=" . $orderId . 
-                       "&orderInfo=" . $orderInfo . 
-                       "&partnerCode=" . $partnerCode . 
-                       "&redirectUrl=" . $redirectUrl . 
-                       "&requestId=" . $requestId . 
-                       "&requestType=" . $requestType;
+            // Tạo rawHash - QUAN TRỌNG: KHÔNG URL encode bất kỳ giá trị nào
+            // Thứ tự: accessKey, amount, extraData, ipnUrl, orderId, orderInfo, partnerCode, redirectUrl, requestId, requestType
+            // Dùng giá trị thô (raw string) như đang gửi trong JSON
+            $rawHash = "accessKey={$accessKey}"
+                . "&amount={$amount}"
+                . "&extraData={$extraData}"
+                . "&ipnUrl={$ipnUrl}"
+                . "&orderId={$orderId}"
+                . "&orderInfo={$orderInfo}"
+                . "&partnerCode={$partnerCode}"
+                . "&redirectUrl={$redirectUrl}"
+                . "&requestId={$requestId}"
+                . "&requestType={$requestType}";
     
-            // Tạo chữ ký
-            $signature = hash_hmac("sha256", $rawHash, $secretKey);
+            // Tạo chữ ký HMAC SHA256
+            $signature = hash_hmac('sha256', $rawHash, $secretKey);
     
-            // Dữ liệu gửi đến MoMo
-            $data = [
+            // Dữ liệu gửi đến MoMo - KHÔNG URL encode bất kỳ giá trị nào
+            $requestData = [
                 'partnerCode' => $partnerCode,
-                'partnerName' => "Test", // Tên đối tác
-                'storeId' => "MomoTestStore", // ID cửa hàng
+                'partnerName' => 'Test',
+                'storeId' => 'MomoTestStore',
                 'requestId' => $requestId,
-                'amount' => $amount,
+                'amount' => $amount,      // kiểu số nguyên
                 'orderId' => $orderId,
-                'orderInfo' => $orderInfo,
+                'orderInfo' => $orderInfo,   // không có #, không dấu tiếng Việt phức tạp
                 'redirectUrl' => $redirectUrl,
                 'ipnUrl' => $ipnUrl,
                 'lang' => 'vi',
-                'extraData' => $extraData,
+                'extraData' => $extraData,   // chuỗi, có thể là ""
                 'requestType' => $requestType,
-                'signature' => $signature
+                'signature' => $signature,
             ];
     
-            // Gửi yêu cầu POST đến MoMo để tạo yêu cầu thanh toán
-            $response = Http::post($endpoint, $data);
+            // Log request để debug - TRƯỚC KHI GỬI
+            \Log::info('MoMo Payment Request', [
+                'rawHash' => $rawHash,
+                'signature' => $signature,
+                'data' => $requestData,
+            ]);
     
+            // Gửi yêu cầu POST đến MoMo để tạo yêu cầu thanh toán
+            $response = Http::post($endpoint, $requestData);
+    
+            // Log response để debug - SAU KHI NHẬN
+            $statusCode = $response->status();
+            $responseBody = $response->json();
+            \Log::info('MoMo Payment Response', [
+                'status' => $statusCode,
+                'body' => $responseBody,
+            ]);
+    
+            // Kiểm tra HTTP status code
             if ($response->successful()) {
-                $body = $response->json();
-                if (isset($body['payUrl'])) {
-                    return response()->json(['payUrl' => $body['payUrl']]);
+                // Kiểm tra resultCode từ MoMo (0 = thành công)
+                $resultCode = $responseBody['resultCode'] ?? null;
+                $message = $responseBody['message'] ?? 'Không có thông báo';
+                
+                if ($resultCode == 0 && isset($responseBody['payUrl'])) {
+                    // Thành công - trả về payUrl
+                    return response()->json([
+                        'success' => true,
+                        'payUrl' => $responseBody['payUrl']
+                    ]);
                 } else {
-                    // Trả về thông tin lỗi trong response nếu không có 'payUrl'
-                    return response()->json(['error' => 'Invalid response from MoMo', 'details' => $body], 400);
+                    // MoMo trả về lỗi (resultCode != 0 hoặc không có payUrl)
+                    $errorMessage = 'MoMo trả về lỗi';
+                    if ($resultCode) {
+                        $errorMessage = "MoMo trả về lỗi resultCode = {$resultCode}: {$message}";
+                    } elseif (!isset($responseBody['payUrl'])) {
+                        $errorMessage = "MoMo không trả về payUrl. Response: " . json_encode($responseBody);
+                    }
+                    
+                    \Log::error('MoMo Payment Error', [
+                        'resultCode' => $resultCode,
+                        'message' => $message,
+                        'response' => $responseBody,
+                    ]);
+                    
+                    return response()->json([
+                        'success' => false,
+                        'error' => $errorMessage,
+                        'details' => $responseBody
+                    ], 400);
                 }
             } else {
-                // Trả về thông tin lỗi trong response nếu lỗi kết nối
-                return response()->json(['error' => 'Lỗi kết nối với MoMo', 'details' => $response->body()], 500);
+                // HTTP error (status code != 200)
+                $errorBody = $response->body();
+                \Log::error('MoMo Payment HTTP Error', [
+                    'status' => $response->status(),
+                    'body' => $errorBody,
+                ]);
+                
+                return response()->json([
+                    'success' => false,
+                    'error' => 'Lỗi kết nối với MoMo (HTTP ' . $response->status() . ')',
+                    'details' => $errorBody
+                ], 500);
             }
         } catch (\Exception $e) {
-            // Trả về chi tiết ngoại lệ trong response
-            return response()->json(['error' => 'Đã xảy ra lỗi', 'message' => $e->getMessage(), 'trace' => $e->getTraceAsString()], 500);
+            // Log exception
+            \Log::error('MoMo Payment Exception', [
+                'message' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+            return response()->json(['error' => 'Đã xảy ra lỗi', 'message' => $e->getMessage()], 500);
         }
     }
     
 
+    /**
+     * Xử lý return URL từ MoMo sau khi user nhập OTP
+     * Route: GET /momo-return
+     */
+    public function handleMomoReturn(Request $request)
+    {
+        // Lấy dữ liệu MoMo trả về qua query string
+        $resultCode = $request->query('resultCode');
+        $message = $request->query('message');
+        $orderId = $request->query('orderId');
+        $amount = $request->query('amount');
+        $transId = $request->query('transId');
+        $extraData = $request->query('extraData');
+        $signature = $request->query('signature');
+        $partnerCode = $request->query('partnerCode');
+        $requestId = $request->query('requestId');
+        $orderInfo = $request->query('orderInfo');
+        $payType = $request->query('payType');
+        $responseTime = $request->query('responseTime');
+        $errorCode = $request->query('errorCode');
+        
+        // Log để debug
+        \Log::info('MoMo Return URL called', [
+            'resultCode' => $resultCode,
+            'transId' => $transId,
+            'orderId' => $orderId,
+            'amount' => $amount,
+            'message' => $message,
+            'all_params' => $request->all(),
+        ]);
+        
+        // TODO (tùy ý): Verify signature nếu cần bảo mật cao
+        // Hiện tại bỏ qua để đơn giản, vì IPN đã verify signature
+        
+        // Lấy thông tin booking từ session
+        $pendingBookingData = session()->get('momo_pending_booking_data');
+        $customTourId = session()->get('customTourId');
+        $tourId = session()->get('tourId');
+        
+        if ($resultCode == '0') {
+            // Thanh toán thành công
+            // Kiểm tra xem booking đã được lưu chưa (từ IPN hoặc từ session)
+            
+            // Xử lý custom tour
+            if ($customTourId && $pendingBookingData && ($pendingBookingData['booking_type'] ?? '') === 'custom') {
+                // Tự động lưu booking nếu chưa có
+                $bookingResult = $this->autoSaveBookingAfterMomoSuccess($customTourId, $pendingBookingData, $transId, $orderId);
+                
+                if ($bookingResult['success']) {
+                    // Xóa session data
+                    session()->forget('customTourId');
+                    session()->forget('momo_pending_booking_data');
+                    
+                    // Redirect đến trang thành công
+                    return redirect()
+                        ->route('tour-booked', [
+                            'bookingId' => $bookingResult['bookingId'],
+                            'checkoutId' => $bookingResult['checkoutId'] ?? null
+                        ])
+                        ->with('success', 'Thanh toán MoMo thành công! Đơn hàng của bạn đã được tạo.');
+                } else {
+                    // Nếu lưu booking thất bại
+                    return redirect()
+                        ->route('custom-tours.checkout', ['id' => $customTourId])
+                        ->with('error', 'Thanh toán thành công nhưng có lỗi khi lưu đơn hàng: ' . ($bookingResult['message'] ?? 'Lỗi không xác định'));
+                }
+            }
+            
+            // Xử lý normal tour
+            if ($pendingBookingData && ($pendingBookingData['booking_type'] ?? '') === 'normal') {
+                // Tự động lưu booking nếu chưa có
+                $bookingResult = $this->autoSaveNormalTourBookingAfterMomoSuccess($pendingBookingData, $transId, $orderId);
+                
+                if ($bookingResult['success']) {
+                    // Xóa session data
+                    session()->forget('tourId');
+                    session()->forget('momo_pending_booking_data');
+                    
+                    // Redirect đến trang thành công
+                    return redirect()
+                        ->route('tour-booked', [
+                            'bookingId' => $bookingResult['bookingId'],
+                            'checkoutId' => $bookingResult['checkoutId']
+                        ])
+                        ->with('success', 'Thanh toán MoMo thành công! Đơn hàng của bạn đã được tạo.');
+                } else {
+                    // Nếu lưu booking thất bại
+                    $tourId = $pendingBookingData['tour_id'] ?? $tourId;
+                    return redirect()
+                        ->route('booking', ['id' => $tourId])
+                        ->with('error', 'Thanh toán thành công nhưng có lỗi khi lưu đơn hàng: ' . ($bookingResult['message'] ?? 'Lỗi không xác định'));
+                }
+            }
+            
+            // Fallback: nếu không có session data, redirect về my-tours
+            return redirect()
+                ->route('my-tours')
+                ->with('success', 'Thanh toán MoMo thành công!');
+                
+        } else {
+            // Thanh toán thất bại hoặc bị hủy
+            $errorMsg = $this->getMomoErrorMessage($resultCode, $message);
+            
+            // Xử lý custom tour
+            if ($customTourId) {
+                return redirect()
+                    ->route('custom-tours.checkout', ['id' => $customTourId])
+                    ->with('error', $errorMsg)
+                    ->with('momo_result_code', $resultCode)
+                    ->with('momo_message', $message);
+            }
+            
+            // Xử lý normal tour
+            if ($tourId) {
+                return redirect()
+                    ->route('booking', ['id' => $tourId])
+                    ->with('error', $errorMsg)
+                    ->with('momo_result_code', $resultCode)
+                    ->with('momo_message', $message);
+            }
+            
+            // Fallback
+            return redirect()
+                ->route('my-tours')
+                ->with('error', $errorMsg);
+        }
+    }
+
+    /**
+     * @deprecated - Method này đã được thay thế bởi handleMomoReturn và handleMomoIPN
+     * Giữ lại để tương thích ngược, nhưng nên dùng handleMomoReturn cho return URL
+     */
     public function handlePaymentMomoCallback(Request $request)
     {
         // MoMo có thể gọi callback qua GET (redirect) hoặc POST (IPN)
@@ -344,7 +573,7 @@ class BookingController extends Controller
         $message = $request->input('message') ?? $request->query('message');
         
         // Log để debug
-        \Log::info('MoMo Callback Received', [
+        \Log::info('MoMo Callback Received (deprecated - use handleMomoReturn)', [
             'resultCode' => $resultCode,
             'transId' => $transIdMomo,
             'orderId' => $orderId,
@@ -353,18 +582,18 @@ class BookingController extends Controller
             'all_params' => $request->all(),
         ]);
         
-        // Kiểm tra nếu là custom tour
+        // Kiểm tra loại booking từ session
+        $pendingBookingData = session()->get('momo_pending_booking_data');
         $customTourId = session()->get('customTourId');
+        $tourId = session()->get('tourId');
         
-            if ($customTourId) {
-            // Xử lý callback cho custom tour
+        // resultCode: '0' = thành công, khác = thất bại hoặc đang xử lý
+        if ($resultCode == '0') {
+            // Thanh toán thành công
             
-            // resultCode: '0' = thành công, khác = thất bại hoặc đang xử lý
-            if ($resultCode == '0') {
-                // Thanh toán thành công - TỰ ĐỘNG LƯU BOOKING
-                $pendingBookingData = session()->get('momo_pending_booking_data');
-                
-                if ($pendingBookingData && $pendingBookingData['custom_tour_id'] == $customTourId) {
+            if ($customTourId && $pendingBookingData && ($pendingBookingData['booking_type'] ?? '') === 'custom') {
+                // Xử lý callback cho custom tour
+                if ($pendingBookingData['custom_tour_id'] == $customTourId) {
                     // Tự động lưu booking
                     $bookingResult = $this->autoSaveBookingAfterMomoSuccess($customTourId, $pendingBookingData, $transIdMomo, $orderId);
                     
@@ -372,12 +601,13 @@ class BookingController extends Controller
                         // Xóa session data
                         session()->forget('customTourId');
                         session()->forget('momo_pending_booking_data');
+                        session()->forget('tourId');
                         
                         // Redirect đến trang thành công
                         return redirect()
                             ->route('tour-booked', [
                                 'bookingId' => $bookingResult['bookingId'],
-                                'checkoutId' => $bookingResult['checkoutId']
+                                'checkoutId' => $bookingResult['checkoutId'] ?? null
                             ])
                             ->with('success', 'Thanh toán MoMo thành công! Đơn hàng của bạn đã được tạo.');
                     } else {
@@ -457,19 +687,99 @@ class BookingController extends Controller
             }
         }
         
-        // Xử lý callback cho tour thông thường
-        $tourId = session()->get('tourId'); 
-        $tour = $this->tour->getTourDetail($tourId);
+        // Xử lý callback cho tour thông thường (normal tour)
+        if ($pendingBookingData && ($pendingBookingData['booking_type'] ?? '') === 'normal') {
+            $tourId = $pendingBookingData['tour_id'] ?? session()->get('tourId');
+            
+            if ($resultCode == '0') {
+                // Thanh toán thành công - TỰ ĐỘNG LƯU BOOKING
+                $bookingResult = $this->autoSaveNormalTourBookingAfterMomoSuccess($pendingBookingData, $transIdMomo, $orderId);
+                
+                if ($bookingResult['success']) {
+                    // Xóa session data
+                    session()->forget('tourId');
+                    session()->forget('momo_pending_booking_data');
+                    
+                    // Redirect đến trang thành công
+                    return redirect()
+                        ->route('tour-booked', [
+                            'bookingId' => $bookingResult['bookingId'],
+                            'checkoutId' => $bookingResult['checkoutId']
+                        ])
+                        ->with('success', 'Thanh toán MoMo thành công! Đơn hàng của bạn đã được tạo.');
+                } else {
+                    // Nếu lưu booking thất bại
+                    return redirect()
+                        ->route('booking', ['id' => $tourId])
+                        ->with('success', 'Thanh toán MoMo thành công! Vui lòng hoàn tất đặt tour.')
+                        ->with('momo_trans_id', $transIdMomo)
+                        ->with('momo_order_id', $orderId)
+                        ->with('warning', 'Đã thanh toán thành công nhưng có lỗi khi lưu đơn hàng. Vui lòng liên hệ hỗ trợ.');
+                }
+            } elseif ($resultCode == '1006' || $resultCode == '1005') {
+                // Giao dịch đang xử lý (pending) - VẪN LƯU BOOKING với paymentStatus = 'n'
+                $bookingResult = $this->saveNormalTourBookingWithPendingPayment($pendingBookingData, $transIdMomo, $orderId);
+                
+                if ($bookingResult['success']) {
+                    session()->forget('tourId');
+                    session()->forget('momo_pending_booking_data');
+                    
+                    return redirect()
+                        ->route('tour-booked', [
+                            'bookingId' => $bookingResult['bookingId'],
+                            'checkoutId' => $bookingResult['checkoutId']
+                        ])
+                        ->with('info', 'Giao dịch đang được xử lý. Đơn hàng của bạn đã được tạo với trạng thái "Chờ thanh toán". MoMo sẽ gửi thông báo khi hoàn tất.');
+                }
+                
+                return redirect()
+                    ->route('booking', ['id' => $tourId])
+                    ->with('info', 'Giao dịch đang được xử lý. MoMo sẽ gửi thông báo khi hoàn tất.')
+                    ->with('momo_trans_id', $transIdMomo)
+                    ->with('momo_order_id', $orderId)
+                    ->with('momo_status', 'pending');
+            } else {
+                // Thanh toán thất bại hoặc bị hủy - VẪN LƯU BOOKING với paymentStatus = 'n'
+                $bookingResult = $this->saveNormalTourBookingWithPendingPayment($pendingBookingData, $transIdMomo, $orderId);
+                
+                if ($bookingResult['success']) {
+                    session()->forget('tourId');
+                    session()->forget('momo_pending_booking_data');
+                    
+                    $errorMsg = $this->getMomoErrorMessage($resultCode, $message);
+                    
+                    return redirect()
+                        ->route('tour-booked', [
+                            'bookingId' => $bookingResult['bookingId'],
+                            'checkoutId' => $bookingResult['checkoutId']
+                        ])
+                        ->with('warning', 'Thanh toán MoMo không thành công. Đơn hàng của bạn đã được tạo với trạng thái "Chờ thanh toán". Bạn có thể thanh toán lại sau. ' . $errorMsg);
+                }
+                
+                // Nếu không lưu được booking
+                $errorMsg = $this->getMomoErrorMessage($resultCode, $message);
+                return redirect()
+                    ->route('booking', ['id' => $tourId])
+                    ->with('error', $errorMsg)
+                    ->with('momo_result_code', $resultCode)
+                    ->with('momo_message', $message);
+            }
+        }
+        
+        // Fallback: nếu không có pending booking data, redirect về trang booking
+        $tourId = session()->get('tourId');
         session()->forget('tourId');
         
-        // Handle the payment response
         if ($resultCode == '0') {
-            $title = 'Đã thanh toán';
-            return view('clients.booking', compact('title', 'tour', 'transIdMomo'));
+            return redirect()
+                ->route('booking', ['id' => $tourId])
+                ->with('success', 'Thanh toán MoMo thành công! Vui lòng hoàn tất đặt tour.')
+                ->with('momo_trans_id', $transIdMomo);
         } elseif ($resultCode == '1006' || $resultCode == '1005') {
-            $title = 'Giao dịch đang xử lý';
-            return view('clients.booking', compact('title', 'tour', 'transIdMomo'))
-                ->with('info', 'Giao dịch đang được xử lý. MoMo sẽ gửi thông báo khi hoàn tất.');
+            return redirect()
+                ->route('booking', ['id' => $tourId])
+                ->with('info', 'Giao dịch đang được xử lý. MoMo sẽ gửi thông báo khi hoàn tất.')
+                ->with('momo_trans_id', $transIdMomo);
         } else {
             // Payment failed, handle the error accordingly
             $errorMsg = $this->getMomoErrorMessage($resultCode, $message);
@@ -674,6 +984,180 @@ class BookingController extends Controller
             
         } catch (\Exception $e) {
             \Log::error('Error auto saving booking after MoMo success', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+            
+            return ['success' => false, 'message' => $e->getMessage()];
+        }
+    }
+    
+    /**
+     * Tự động lưu booking tour thường sau khi thanh toán MoMo thành công
+     */
+    private function autoSaveNormalTourBookingAfterMomoSuccess($bookingData, $transIdMomo, $orderId)
+    {
+        try {
+            // 1. Lấy tour từ DB
+            $tourId = $bookingData['tour_id'] ?? null;
+            if (!$tourId) {
+                return ['success' => false, 'message' => 'Không tìm thấy tour ID'];
+            }
+            
+            $tour = $this->tour->getTourDetail($tourId);
+            if (!$tour) {
+                return ['success' => false, 'message' => 'Không tìm thấy tour'];
+            }
+            
+            // 2. Lấy userId từ session
+            $userId = $this->getUserId();
+            if (!$userId) {
+                return ['success' => false, 'message' => 'Không tìm thấy userId'];
+            }
+            
+            // 3. Số người & tổng tiền
+            $numAdults = (int) ($bookingData['numAdults'] ?? 1);
+            $numChildren = (int) ($bookingData['numChildren'] ?? 0);
+            $totalPeople = $numAdults + $numChildren;
+            $totalPrice = (float) ($bookingData['amount'] ?? 0);
+            
+            // Kiểm tra tour còn chỗ không
+            if ($tour->quantity < $totalPeople) {
+                return ['success' => false, 'message' => 'Tour không còn đủ chỗ! Số chỗ còn lại: ' . $tour->quantity];
+            }
+            
+            // 4. Insert vào tbl_booking
+            $bookingDataInsert = [
+                'tourId' => $tourId,
+                'userId' => $userId,
+                'fullName' => $bookingData['full_name'] ?? '',
+                'email' => $bookingData['email'] ?? '',
+                'phoneNumber' => $bookingData['phone'] ?? '',
+                'address' => $bookingData['address'] ?? '',
+                'bookingDate' => now(),
+                'numAdults' => $numAdults,
+                'numChildren' => $numChildren,
+                'totalPrice' => $totalPrice,
+                'bookingStatus' => 'b', // booked
+            ];
+            
+            $bookingId = DB::table('tbl_booking')->insertGetId($bookingDataInsert);
+            
+            // 5. Insert vào tbl_checkout với paymentStatus = 'y' (đã thanh toán)
+            $checkoutId = DB::table('tbl_checkout')->insertGetId([
+                'bookingId' => $bookingId,
+                'paymentMethod' => 'momo-payment',
+                'amount' => $totalPrice,
+                'paymentStatus' => 'y', // Đã thanh toán
+                'transactionId' => $transIdMomo ?? $orderId,
+            ]);
+            
+            // 6. Cập nhật số lượng tour
+            $newQuantity = max(0, $tour->quantity - $totalPeople);
+            $this->tour->updateTours($tourId, ['quantity' => $newQuantity]);
+            
+            \Log::info('Auto saved normal tour booking after MoMo success', [
+                'bookingId' => $bookingId,
+                'checkoutId' => $checkoutId,
+                'tourId' => $tourId,
+                'transId' => $transIdMomo,
+            ]);
+            
+            return [
+                'success' => true,
+                'bookingId' => $bookingId,
+                'checkoutId' => $checkoutId,
+            ];
+            
+        } catch (\Exception $e) {
+            \Log::error('Error auto saving normal tour booking after MoMo success', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+            
+            return ['success' => false, 'message' => $e->getMessage()];
+        }
+    }
+    
+    /**
+     * Lưu booking tour thường với trạng thái chờ thanh toán (khi thanh toán thất bại hoặc đang xử lý)
+     */
+    private function saveNormalTourBookingWithPendingPayment($bookingData, $transIdMomo = null, $orderId = null)
+    {
+        try {
+            // 1. Lấy tour từ DB
+            $tourId = $bookingData['tour_id'] ?? null;
+            if (!$tourId) {
+                return ['success' => false, 'message' => 'Không tìm thấy tour ID'];
+            }
+            
+            $tour = $this->tour->getTourDetail($tourId);
+            if (!$tour) {
+                return ['success' => false, 'message' => 'Không tìm thấy tour'];
+            }
+            
+            // 2. Lấy userId từ session
+            $userId = $this->getUserId();
+            if (!$userId) {
+                return ['success' => false, 'message' => 'Không tìm thấy userId'];
+            }
+            
+            // 3. Số người & tổng tiền
+            $numAdults = (int) ($bookingData['numAdults'] ?? 1);
+            $numChildren = (int) ($bookingData['numChildren'] ?? 0);
+            $totalPeople = $numAdults + $numChildren;
+            $totalPrice = (float) ($bookingData['amount'] ?? 0);
+            
+            // Kiểm tra tour còn chỗ không
+            if ($tour->quantity < $totalPeople) {
+                return ['success' => false, 'message' => 'Tour không còn đủ chỗ! Số chỗ còn lại: ' . $tour->quantity];
+            }
+            
+            // 4. Insert vào tbl_booking
+            $bookingDataInsert = [
+                'tourId' => $tourId,
+                'userId' => $userId,
+                'fullName' => $bookingData['full_name'] ?? '',
+                'email' => $bookingData['email'] ?? '',
+                'phoneNumber' => $bookingData['phone'] ?? '',
+                'address' => $bookingData['address'] ?? '',
+                'bookingDate' => now(),
+                'numAdults' => $numAdults,
+                'numChildren' => $numChildren,
+                'totalPrice' => $totalPrice,
+                'bookingStatus' => 'b', // booked
+            ];
+            
+            $bookingId = DB::table('tbl_booking')->insertGetId($bookingDataInsert);
+            
+            // 5. Insert vào tbl_checkout với paymentStatus = 'n' (chưa thanh toán)
+            $checkoutId = DB::table('tbl_checkout')->insertGetId([
+                'bookingId' => $bookingId,
+                'paymentMethod' => 'momo-payment',
+                'amount' => $totalPrice,
+                'paymentStatus' => 'n', // Chưa thanh toán
+                'transactionId' => $transIdMomo ?? $orderId ?? null,
+            ]);
+            
+            // 6. Cập nhật số lượng tour
+            $newQuantity = max(0, $tour->quantity - $totalPeople);
+            $this->tour->updateTours($tourId, ['quantity' => $newQuantity]);
+            
+            \Log::info('Saved normal tour booking with pending payment', [
+                'bookingId' => $bookingId,
+                'checkoutId' => $checkoutId,
+                'tourId' => $tourId,
+                'paymentStatus' => 'n',
+            ]);
+            
+            return [
+                'success' => true,
+                'bookingId' => $bookingId,
+                'checkoutId' => $checkoutId,
+            ];
+            
+        } catch (\Exception $e) {
+            \Log::error('Error saving normal tour booking with pending payment', [
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString(),
             ]);

@@ -84,7 +84,6 @@
                     <p>Mã tour : {{ $tour_booked->tourId }}</p>
                     @if (isset($tour_booked->isCustomTour) && $tour_booked->isCustomTour)
                         <input type="hidden" name="tourId" id="tourId" value="">
-                        <input type="hidden" name="isCustomTour" value="1">
                     @else
                         <input type="hidden" name="tourId" id="tourId" value="{{ $tour_booked->tourId }}">
                     @endif
@@ -146,15 +145,32 @@
                 </div>
 
                 <input type="hidden" name="bookingId" value="{{ $bookingId }}">
+                @if (isset($checkoutId) && $checkoutId)
+                    <input type="hidden" name="checkoutId" value="{{ $checkoutId }}">
+                @endif
+                @if (isset($tour_booked->isCustomTour) && $tour_booked->isCustomTour)
+                    <input type="hidden" name="isCustomTour" value="1">
+                @endif
 
                 @if ($tour_booked->bookingStatus == 'f')
-                    <a href="{{ route('tour-detail', ['id' => $tour_booked->tourId]) }}" class="booking-btn"
-                        style="display: inline-block; text-align: center;">
-                        Đánh giá
-                    </a>
+                    @if (isset($tour_booked->isCustomTour) && $tour_booked->isCustomTour)
+                        {{-- Custom tour đã hoàn thành: không có nút đánh giá --}}
+                    @else
+                        <a href="{{ route('tour-detail', ['id' => $tour_booked->tourId]) }}" class="booking-btn"
+                            style="display: inline-block; text-align: center;">
+                            Đánh giá
+                        </a>
+                    @endif
+                @elseif (!empty($canCancel) && $canCancel)
+                    {{-- Hiển thị nút Hủy Tour nếu $canCancel = true --}}
+                    <button type="submit" class="booking-btn btn-cancel-booking">Hủy Tour</button>
                 @else
-                    <button type="submit" class="booking-btn btn-cancel-booking {{ $hide }}">Hủy
-                        Tour</button>
+                    {{-- Không hiển thị nút nếu không thể hủy (còn < 3 ngày hoặc đã hủy/hoàn thành) --}}
+                    @if (!empty($tour_booked->startDate))
+                        <p class="text-muted" style="font-size: 14px; margin-top: 10px;">
+                            <i class="fas fa-info-circle"></i> Không thể hủy tour trong vòng 3 ngày trước ngày khởi hành.
+                        </p>
+                    @endif
                 @endif
 
             </div>

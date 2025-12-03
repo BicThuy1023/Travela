@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\clients;
 
 use App\Http\Controllers\Controller;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Session;
@@ -43,6 +44,14 @@ class BuildTourController extends Controller
         'days'                  => 'sometimes|nullable|integer|min:1',
         'nights'                => 'sometimes|nullable|integer|min:0',
     ]);
+
+    // 1.1. KIỂM TRA NGÀY KHỞI HÀNH PHẢI CÁCH HÔM NAY ÍT NHẤT 3 NGÀY
+    $startDate = Carbon::parse($validated['start_date']);
+    $minStartDate = Carbon::now()->addDays(3)->startOfDay();
+    
+    if ($startDate->lt($minStartDate)) {
+        return back()->withInput()->with('error', 'Ngày khởi hành dự kiến phải cách hôm nay ít nhất 3 ngày. Vui lòng chọn ngày khác.');
+    }
 
     // 2. PARSE main_destinations
     $mainDestinations = json_decode($validated['main_destinations'], true);

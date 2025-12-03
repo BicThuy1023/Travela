@@ -172,9 +172,30 @@ class Tours extends Model
             if (!$checkoutId) {
                 return null;
             }
+            // Select rõ ràng các cột cần thiết, đặc biệt là startDate từ tbl_tours
             $booked = DB::table($this->table)
                 ->join('tbl_booking', 'tbl_tours.tourId', '=', 'tbl_booking.tourId')
                 ->join('tbl_checkout', 'tbl_booking.bookingId', '=', 'tbl_checkout.bookingId')
+                ->select(
+                    'tbl_tours.*',
+                    'tbl_booking.bookingId',
+                    'tbl_booking.fullName',
+                    'tbl_booking.email',
+                    'tbl_booking.phoneNumber',
+                    'tbl_booking.address',
+                    'tbl_booking.numAdults',
+                    'tbl_booking.numChildren',
+                    'tbl_booking.totalPrice',
+                    'tbl_booking.bookingStatus',
+                    'tbl_booking.bookingDate',
+                    'tbl_checkout.checkoutId',
+                    'tbl_checkout.paymentMethod',
+                    'tbl_checkout.paymentStatus',
+                    'tbl_checkout.transactionId',
+                    // Đảm bảo startDate từ tbl_tours được lấy
+                    'tbl_tours.startDate',
+                    'tbl_tours.endDate'
+                )
                 ->where('tbl_booking.bookingId', '=', $bookingId)
                 ->where('tbl_checkout.checkoutId', '=', $checkoutId)
                 ->first();

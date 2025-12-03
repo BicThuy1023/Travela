@@ -135,10 +135,10 @@
     id="startDate"
     class="form-control"
     required
-    min="{{ \Carbon\Carbon::now()->addDays(2)->format('Y-m-d') }}"
+    min="{{ \Carbon\Carbon::now()->addDays(3)->format('Y-m-d') }}"
 >
 <div class="form-text">
-    Chọn ngày bắt đầu hành trình (cách hôm nay ít nhất 2 ngày).
+    Chọn ngày bắt đầu hành trình (cách hôm nay ít nhất 3 ngày).
 </div>
 
                             </div>

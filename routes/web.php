@@ -162,6 +162,11 @@ Route::post('/booking/{id?}', [BookingController::class, 'index'])
 
 Route::post('/create-booking', [BookingController::class, 'createBooking'])->name('create-booking');
 
+// MoMo Payment
+Route::post('/create-momo-payment', [BookingController::class, 'createMomoPayment'])->name('createMomoPayment');
+Route::get('/momo-return', [BookingController::class, 'handleMomoReturn'])->name('momo.return'); // Return URL sau khi user nhập OTP
+Route::post('/momo-ipn', [BookingController::class, 'handleMomoIPN'])->name('momo.ipn'); // IPN webhook từ MoMo
+// Route cũ /booking GET đã được thay thế bởi /momo-return, giữ lại để tương thích ngược
 Route::get('/booking', [BookingController::class, 'handlePaymentMomoCallback'])
     ->name('handlePaymentMomoCallback');
 
@@ -171,9 +176,7 @@ Route::get('process-transaction', [PayPalController::class, 'processTransaction'
 Route::get('success-transaction', [PayPalController::class, 'successTransaction'])->name('successTransaction');
 Route::get('cancel-transaction', [PayPalController::class, 'cancelTransaction'])->name('cancelTransaction');
 
-// Momo
-Route::post('/create-momo-payment', [BookingController::class, 'createMomoPayment'])->name('createMomoPayment');
-Route::post('/momo-ipn', [BookingController::class, 'handleMomoIPN'])->name('momo.ipn'); // IPN webhook từ MoMo
+// MoMo routes đã được di chuyển lên trên (sau /create-booking)
 
 // Test MoMo payment success (chỉ dùng trong development)
 Route::get('/test-momo-success/{customTourId}', [BookingController::class, 'testMomoPaymentSuccess'])->name('test.momo.success');

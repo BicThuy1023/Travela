@@ -73,8 +73,8 @@
                     này sẽ được áp dụng. Vui lòng đọc kỹ điều kiện điều khoản trước khi lựa chọn sử dụng dịch vụ của
                     Asia Travel.</p>
                 <div class="privacy-checkbox">
-                    <input type="checkbox" id="agree" name="agree" required>
-                    <label for="agree">Tôi đã đọc và đồng ý với <a href="#" target="_blank">Điều khoản thanh
+                    <input type="checkbox" id="agreeTerms" name="agree_terms" required>
+                    <label for="agreeTerms">Tôi đã đọc và đồng ý với <a href="#" target="_blank">Điều khoản thanh
                             toán</a></label>
                 </div>
             </div>
@@ -154,7 +154,7 @@
 
                 <div id="paypal-button-container"></div>
 
-                <button type="submit" class="booking-btn btn-submit-booking">Xác Nhận</button>
+                <button type="submit" class="booking-btn btn-submit-booking" id="btn-submit-booking">Xác Nhận</button>
 
                 <button id="btn-momo-payment" class="booking-btn" style="display: none;"
                     data-urlmomo="{{ route('createMomoPayment') }}">Thanh toán với Momo <img
@@ -308,6 +308,199 @@
     const checkedPayment = document.querySelector('input[name="payment"]:checked');
     if (checkedPayment && paymentHidden) {
         paymentHidden.value = checkedPayment.value;
+    }
+
+    /**
+     * Xử lý hiển thị/ẩn nút MoMo payment và nút Xác Nhận
+     */
+    const btnMomoPayment = document.getElementById('btn-momo-payment');
+    const btnSubmitBooking = document.getElementById('btn-submit-booking');
+    const paymentRadiosForMomo = document.querySelectorAll('input[name="payment"]');
+    
+    paymentRadiosForMomo.forEach(radio => {
+        radio.addEventListener('change', function() {
+            if (this.value === 'momo-payment') {
+                // Hiển thị nút MoMo, ẩn nút Xác Nhận
+                if (btnMomoPayment) {
+                    btnMomoPayment.style.display = 'block';
+                }
+                if (btnSubmitBooking) {
+                    btnSubmitBooking.style.display = 'none';
+                }
+            } else {
+                // Ẩn nút MoMo, hiển thị nút Xác Nhận
+                if (btnMomoPayment) {
+                    btnMomoPayment.style.display = 'none';
+                }
+                if (btnSubmitBooking) {
+                    btnSubmitBooking.style.display = 'block';
+                }
+            }
+        });
+    });
+
+    // Kiểm tra radio mặc định
+    if (checkedPayment) {
+        if (checkedPayment.value === 'momo-payment') {
+            if (btnMomoPayment) {
+                btnMomoPayment.style.display = 'block';
+            }
+            if (btnSubmitBooking) {
+                btnSubmitBooking.style.display = 'none';
+            }
+        } else {
+            if (btnMomoPayment) {
+                btnMomoPayment.style.display = 'none';
+            }
+            if (btnSubmitBooking) {
+                btnSubmitBooking.style.display = 'block';
+            }
+        }
+    }
+
+    /**
+     * Xử lý click nút MoMo payment
+     */
+    if (btnMomoPayment) {
+        btnMomoPayment.addEventListener('click', function(e) {
+            e.preventDefault();
+            
+            const urlMomo = this.getAttribute('data-urlmomo');
+            const tourIdInput = document.getElementById('tourId');
+            const totalPriceInput = document.getElementById('totalPrice');
+            const fullNameInput = document.getElementById('username'); // ID là 'username' nhưng name là 'fullName'
+            const emailInput = document.getElementById('email');
+            const telInput = document.getElementById('tel');
+            const addressInput = document.getElementById('address');
+            const numAdultsInput = document.getElementById('numAdults');
+            const numChildrenInput = document.getElementById('numChildren');
+            
+            if (!tourIdInput || !totalPriceInput || !fullNameInput || !emailInput || !telInput) {
+                alert('Vui lòng điền đầy đủ thông tin!');
+                return false;
+            }
+            
+            const tourId = tourIdInput.value;
+            const totalPrice = totalPriceInput.value;
+            const fullName = fullNameInput.value;
+            const email = emailInput.value;
+            const tel = telInput.value;
+            const address = addressInput ? addressInput.value : '';
+            const numAdults = numAdultsInput ? numAdultsInput.value : '1';
+            const numChildren = numChildrenInput ? numChildrenInput.value : '0';
+
+            // Validate form
+            if (!fullName || fullName.trim() === '') {
+                alert('Vui lòng điền họ và tên');
+                return false;
+            }
+            
+            if (!email || email.trim() === '') {
+                alert('Vui lòng điền email');
+                return false;
+            }
+            
+            // Validate email format
+            const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            if (!emailPattern.test(email)) {
+                alert('Email không đúng định dạng');
+                return false;
+            }
+            
+            if (!tel || tel.trim() === '') {
+                alert('Vui lòng điền số điện thoại');
+                return false;
+            }
+            
+            // Validate phone format (10-11 digits)
+            const phonePattern = /^[0-9]{10,11}$/;
+            if (!phonePattern.test(tel.trim())) {
+                alert('Số điện thoại phải có 10-11 chữ số');
+                return false;
+            }
+
+            if (!totalPrice || totalPrice <= 0) {
+                alert('Giá tour không hợp lệ');
+                return false;
+            }
+
+            // Kiểm tra checkbox "Đồng ý điều khoản"
+            const agreeCheckbox = document.getElementById('agreeTerms');
+            if (!agreeCheckbox || !agreeCheckbox.checked) {
+                alert('Vui lòng đọc và đồng ý với Điều khoản thanh toán trước khi tiếp tục.');
+                return false;
+            }
+
+            // Disable button để tránh double click
+            this.disabled = true;
+            this.textContent = 'Đang xử lý...';
+            
+            // Thu thập thông tin form để lưu vào session
+            const formData = {
+                full_name: fullName,
+                email: email,
+                phone: tel,
+                address: address || '',
+                numAdults: numAdults,
+                numChildren: numChildren
+            };
+            
+            // Gửi request đến createMomoPayment
+            const requestData = {
+                amount: totalPrice,
+                tourId: tourId,
+                form_data: JSON.stringify(formData),
+                _token: document.querySelector('input[name="_token"]')?.value
+            };
+            
+            console.log('MoMo Payment Request:', requestData);
+            
+            fetch(urlMomo, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || document.querySelector('input[name="_token"]')?.value,
+                    'Accept': 'application/json'
+                },
+                body: JSON.stringify(requestData)
+            })
+            .then(response => {
+                console.log('MoMo Payment Response Status:', response.status);
+                return response.json();
+            })
+            .then(data => {
+                console.log('MoMo Payment Response Data:', data);
+                
+                // Kiểm tra success flag và payUrl
+                if (data && data.success === true && data.payUrl) {
+                    // Thành công - chuyển hướng đến URL thanh toán MoMo
+                    console.log('Redirecting to MoMo:', data.payUrl);
+                    window.location.href = data.payUrl;
+                } else {
+                    // Lỗi - hiển thị thông báo chi tiết
+                    btnMomoPayment.disabled = false;
+                    btnMomoPayment.innerHTML = 'Thanh toán với Momo <img src="{{ asset('clients/assets/images/booking/icon-thanh-toan-momo.png') }}" alt="" style="width: 10%">';
+                    
+                    let errorMsg = "Không thể tạo thanh toán MoMo. Vui lòng thử lại.";
+                    if (data && data.error) {
+                        errorMsg = data.error;
+                    } else if (data && data.message) {
+                        errorMsg = data.message;
+                    }
+                    
+                    console.error('MoMo Payment Error:', data);
+                    alert(errorMsg);
+                }
+            })
+            .catch(error => {
+                btnMomoPayment.disabled = false;
+                btnMomoPayment.innerHTML = 'Thanh toán với Momo <img src="{{ asset('clients/assets/images/booking/icon-thanh-toan-momo.png') }}" alt="" style="width: 10%">';
+                console.error('MoMo Payment Exception:', error);
+                alert("Có lỗi xảy ra khi kết nối đến MoMo. Vui lòng kiểm tra console để xem chi tiết.");
+            });
+            
+            return false;
+        });
     }
 })();
 </script>

@@ -253,7 +253,7 @@ PROMPT;
         } elseif (mb_strpos($lowerMessage, 'thanh toán') !== false || mb_strpos($lowerMessage, 'payment') !== false) {
             $response = 'Chúng tôi hỗ trợ thanh toán qua VNPay và thanh toán tại văn phòng. Sau khi đặt tour, bạn sẽ được chuyển đến trang thanh toán an toàn.';
         } elseif (mb_strpos($lowerMessage, 'hủy') !== false || mb_strpos($lowerMessage, 'cancel') !== false) {
-            $response = 'Bạn có thể hủy đặt tour trong mục "Tour đã đặt của tôi". Lưu ý: Không thể hủy trong vòng 24 giờ trước ngày khởi hành.';
+            $response = 'Bạn có thể hủy đặt tour trong mục "Tour đã đặt của tôi". Lưu ý: Không thể hủy trong vòng 3 ngày trước ngày khởi hành.';
         } elseif (mb_strpos($lowerMessage, 'giá') !== false || mb_strpos($lowerMessage, 'price') !== false) {
             $response = 'Giá tour phụ thuộc vào điểm đến, thời gian và số lượng người. Bạn có thể sử dụng bộ lọc để tìm tour theo mức giá phù hợp.';
         } else {

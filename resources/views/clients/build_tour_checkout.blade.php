@@ -293,21 +293,6 @@
                         style="width: 10%">
                 </button>
 
-                {{-- Nút test thanh toán thành công (chỉ hiện trong development) --}}
-                @if(config('app.env') !== 'production')
-                <div style="margin-top: 15px; padding: 15px; background-color: #fff3cd; border-radius: 5px; border-left: 4px solid #ffc107;">
-                    <p style="margin: 0 0 10px 0; font-size: 14px; color: #856404;">
-                        <strong>⚠️ LƯU Ý:</strong> Nếu gặp lỗi "Khóa trang web không hợp lệ" hoặc "Vui lòng xác thực captcha" trên trang MoMo, đây là lỗi từ MoMo sandbox. Bạn có thể bỏ qua và sử dụng nút TEST bên dưới.
-                    </p>
-                    <div style="display: flex; gap: 10px; flex-wrap: wrap; margin-top: 10px;">
-                        <button type="button" id="btn-test-payment-success" 
-                           class="booking-btn" 
-                           style="display: inline-block; background-color: #28a745; padding: 10px 20px; font-size: 14px; border: none; cursor: pointer;">
-                            ✅ TEST: Giả lập thanh toán thành công
-                        </button>
-                    </div>
-                </div>
-                @endif
 
             </div>
         </div>

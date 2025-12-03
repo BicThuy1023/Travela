@@ -81,7 +81,7 @@
                                 </div>
                             </div>
                             <h5><a
-                                    href="{{ route('tour-booked', ['bookingId' => $tour->bookingId, 'checkoutId' => $tour->checkoutId]) }}">{{ $tour->title }}</a>
+                                    href="{{ route('tour-booked', array_filter(['bookingId' => $tour->bookingId, 'checkoutId' => $tour->checkoutId ?? null])) }}">{{ $tour->title }}</a>
                             </h5>
                             <div class="truncate-3-lines">
                                 {!! $tour->description !!}
