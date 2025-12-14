@@ -4,6 +4,99 @@
 <!--Form Back Drop-->
 <div class="form-back-drop"></div>
 
+<!-- Promotions Banner Section -->
+@if(isset($promotions) && $promotions->count() > 0)
+    <section class="promotions-banner-section py-80" style="background: linear-gradient(135deg, #e8f5e9 0%, #fff3e0 100%);">
+        <div class="container">
+            <div class="row align-items-center">
+                <div class="col-lg-8">
+                    <div class="promotions-banner-content">
+                        <h2 style="font-size: 32px; font-weight: 700; margin-bottom: 15px; color: #2c3e50;">
+                            <i class="fa fa-tag" style="color: #73d13d;"></i> Ưu đãi đặc biệt hôm nay!
+                        </h2>
+                        <p style="font-size: 16px; color: #666; margin-bottom: 0;">
+                            Khám phá các mã giảm giá hấp dẫn và tiết kiệm cho chuyến du lịch của bạn
+                        </p>
+                    </div>
+                </div>
+                <div class="col-lg-4 text-lg-end">
+                    <a href="{{ route('client.promotions.index') }}" class="theme-btn"
+                        style="background: #73d13d; color: white; font-weight: 600; padding: 15px 30px; border: none;">
+                        <span>Xem tất cả mã</span>
+                        <i class="fal fa-arrow-right"></i>
+                    </a>
+                </div>
+            </div>
+
+            <!-- Promotions Cards -->
+            <div class="row mt-40">
+                @foreach($promotions as $promotion)
+                    @php
+                        $isExpired = false;
+                        if ($promotion->usage_limit > 0 && $promotion->usage_count >= $promotion->usage_limit) {
+                            $isExpired = true;
+                        }
+                    @endphp
+                    <div class="col-lg-4 col-md-6 mb-20">
+                        <div class="promo-banner-card"
+                            style="background: white; border-radius: 12px; padding: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); transition: transform 0.3s ease; position: relative; {{ $isExpired ? 'opacity: 0.7;' : '' }}"
+                            onmouseover="this.style.transform='translateY(-5px)'"
+                            onmouseout="this.style.transform='translateY(0)'">
+                            @if($isExpired)
+                                <div
+                                    style="position: absolute; top: 10px; right: 10px; background: #dc3545; color: white; padding: 4px 10px; border-radius: 12px; font-size: 11px; font-weight: 600; z-index: 10;">
+                                    Hết mã
+                                </div>
+                            @endif
+                            <div
+                                style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 15px;">
+                                <div>
+                                    <span
+                                        style="background: linear-gradient(135deg, #ff8c42, #ffb366); color: white; padding: 4px 12px; border-radius: 12px; font-size: 11px; font-weight: 600;">
+                                        @if($promotion->apply_type === 'global')
+                                            Áp dụng toàn bộ
+                                        @else
+                                            Tour cụ thể
+                                        @endif
+                                    </span>
+                                    <h5 style="margin-top: 10px; font-size: 18px; font-weight: 600; color: #2c3e50;">
+                                        {{ $promotion->name }}
+                                    </h5>
+                                </div>
+                                <div style="text-align: right;">
+                                    <div style="font-size: 24px; font-weight: bold; color: #ff8c42;">
+                                        @if($promotion->discount_type === 'percent')
+                                            {{ $promotion->discount_value }}%
+                                        @else
+                                            {{ number_format($promotion->discount_value / 1000, 0) }}K
+                                        @endif
+                                    </div>
+                                    <div style="font-size: 11px; color: #999;">GIẢM</div>
+                                </div>
+                            </div>
+                            <div style="border-top: 1px dashed #ddd; padding-top: 15px; margin-top: 15px;">
+                                <div style="display: flex; justify-content: space-between; align-items: center;">
+                                    <div>
+                                        <div style="font-size: 12px; color: #999; margin-bottom: 5px;">Mã ưu đãi:</div>
+                                        <div
+                                            style="font-size: 16px; font-weight: bold; color: {{ $isExpired ? '#999' : '#73d13d' }}; font-family: 'Courier New', monospace;">
+                                            {{ $promotion->code }}
+                                        </div>
+                                    </div>
+                                    <button onclick="copyPromoCode('{{ $promotion->code }}', this)"
+                                        style="background: {{ $isExpired ? '#ccc' : 'linear-gradient(135deg, #73d13d, #95de64)' }}; color: white; border: none; padding: 8px 16px; border-radius: 8px; font-size: 12px; font-weight: 600; cursor: {{ $isExpired ? 'not-allowed' : 'pointer' }}; {{ $isExpired ? 'opacity: 0.6;' : '' }}">
+                                        <i class="fa fa-copy"></i> Sao chép
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                @endforeach
+            </div>
+        </div>
+    </section>
+@endif
+
 <!-- Destinations Area start Trang Chu -->
 <section class="destinations-area bgc-black pt-100 pb-70 rel z-1">
     <div class="container-fluid">
@@ -128,15 +221,62 @@
             <div class="container">
                 <div class="row justify-content-center">
                     @php $count = 0; @endphp
-                    @foreach ($toursPopular as $tour)
-                        @if ($count == 2 || $count == 3)
-                            <!-- Cột thứ 3 và thứ 4 sẽ là col-md-6 -->
-                            <div class="col-md-6 item ">
-                        @else
-                                <!-- Các cột còn lại sẽ là col-xl-3 col-md-6 -->
-                                <div class="col-xl-3 col-md-6 item ">
-                            @endif
+                    @if (!empty($toursPopular) && $toursPopular->isNotEmpty())
+                        @foreach ($toursPopular as $tour)
+                            @if ($count == 2 || $count == 3)
+                                <!-- Cột thứ 3 và thứ 4 sẽ là col-md-6 -->
+                                <div class="col-md-6 item ">
+                            @else
+                                    <!-- Các cột còn lại sẽ là col-xl-3 col-md-6 -->
+                                    <div class="col-xl-3 col-md-6 item ">
+                                @endif
 
+                                    <div class="destination-item style-two" data-aos-duration="1500" data-aos-offset="50">
+                                        <div class="image" style="max-height: 250px">
+                                            <a href="#" class="heart"><i class="fas fa-heart"></i></a>
+                                            <img src="{{ asset('admin/assets/images/gallery-tours/' . $tour->images[0]) }}"
+                                                alt="Destination">
+                                        </div>
+                                        <div class="content">
+                                            <h6 class="tour-title"><a
+                                                    href="{{ route('tour-detail', ['id' => $tour->tourId]) }}">{{ $tour->title }}</a>
+                                            </h6>
+                                            <span class="time">{{ $tour->time }}</span>
+                                            <a href="{{ route('tour-detail', ['id' => $tour->tourId]) }}" class="more"><i
+                                                    class="fas fa-chevron-right"></i></a>
+                                        </div>
+                                    </div>
+
+                                </div>
+
+                                @php $count++; @endphp
+                        @endforeach
+                    @endif
+                    </div>
+                </div>
+            </div>
+        </div>
+</section>
+<!-- Trending Tours Area end -->
+
+@if (!empty($userRecommendations) && $userRecommendations->isNotEmpty())
+    <!-- Recommended For You Area start -->
+    <section class="popular-destinations-area rel z-1">
+        <div class="container-fluid">
+            <div class="popular-destinations-wrap br-20 bgc-lighter pt-100 pb-70">
+                <div class="row justify-content-center">
+                    <div class="col-lg-12">
+                        <div class="section-title text-center counter-text-wrap mb-70" data-aos="fade-up"
+                            data-aos-duration="1500" data-aos-offset="50">
+                            <h2>Gợi ý dành riêng cho bạn</h2>
+                            <p>Các tour được gợi ý dành riêng cho bạn</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="container">
+                    <div class="row justify-content-center">
+                        @foreach ($userRecommendations as $tour)
+                            <div class="col-xl-3 col-md-6 item">
                                 <div class="destination-item style-two" data-aos-duration="1500" data-aos-offset="50">
                                     <div class="image" style="max-height: 250px">
                                         <a href="#" class="heart"><i class="fas fa-heart"></i></a>
@@ -152,17 +292,15 @@
                                                 class="fas fa-chevron-right"></i></a>
                                     </div>
                                 </div>
-
                             </div>
-
-                            @php $count++; @endphp
-                    @endforeach
+                        @endforeach
                     </div>
                 </div>
             </div>
         </div>
-</section>
-<!-- Popular Destinations Area end -->
+    </section>
+    <!-- Recommended For You Area end -->
+@endif
 
 
 <!-- Features Area start -->
@@ -535,6 +673,39 @@
     });
 </script>
 
+<script>
+    function copyPromoCode(code, button) {
+        const textarea = document.createElement('textarea');
+        textarea.value = code;
+        textarea.style.position = 'fixed';
+        textarea.style.opacity = '0';
+        document.body.appendChild(textarea);
+        textarea.select();
+
+        try {
+            document.execCommand('copy');
+            const originalText = button.innerHTML;
+            button.innerHTML = '<i class="fa fa-check"></i> Đã sao chép!';
+            button.style.background = '#73d13d';
+
+            if (typeof toastr !== 'undefined') {
+                toastr.success('Đã sao chép mã: ' + code);
+            } else {
+                alert('Đã sao chép mã: ' + code);
+            }
+
+            setTimeout(() => {
+                button.innerHTML = originalText;
+                button.style.background = 'linear-gradient(135deg, #73d13d, #95de64)';
+            }, 2000);
+        } catch (err) {
+            console.error('Lỗi khi sao chép:', err);
+            alert('Không thể sao chép mã. Vui lòng sao chép thủ công: ' + code);
+        }
+
+        document.body.removeChild(textarea);
+    }
+</script>
 
 
 @include('clients.blocks.footer_home')

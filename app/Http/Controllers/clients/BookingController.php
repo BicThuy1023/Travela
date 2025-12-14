@@ -6,10 +6,16 @@ use App\Http\Controllers\Controller;
 use App\Models\clients\Booking;
 use App\Models\clients\Checkout;
 use App\Models\clients\Tours;
+use App\Models\Promotion;
+use Exception;
+use Illuminate\Database\QueryException;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Session;
+use Illuminate\Validation\ValidationException;
 
 class BookingController extends Controller
 {
@@ -163,11 +169,21 @@ class BookingController extends Controller
             }
 
             // Xử lý checkout
+            // Lấy thông tin promotion từ session nếu có
+            $promotionId = session('promotion_id');
+            $promotionCode = session('promotion_code');
+            $discountAmount = session('discount_amount', 0);
+            $finalTotal = session('final_total', $totalPrice);
+
             $dataCheckout = [
                 'bookingId' => $bookingId,
                 'paymentMethod' => $paymentMethod,
-                'amount' => $totalPrice,
+                'amount' => $totalPrice, // Giữ nguyên tổng tiền gốc
                 'paymentStatus' => ($paymentMethod === 'paypal-payment' || $paymentMethod === 'momo-payment') ? 'y' : 'n',
+                'promotion_id' => $promotionId,
+                'promotion_code' => $promotionCode,
+                'discount_amount' => $discountAmount,
+                'final_total' => $finalTotal,
             ];
 
             if ($paymentMethod === 'paypal-payment' && $req->has('transactionIdPaypal')) {
@@ -178,9 +194,19 @@ class BookingController extends Controller
 
             $checkoutId = $this->checkout->createCheckout($dataCheckout);
 
+            // Nếu có promotion, tăng usage_count và xóa session
+            if ($promotionId) {
+                DB::table('tbl_promotions')
+                    ->where('id', $promotionId)
+                    ->increment('usage_count');
+                
+                // Xóa session promotion
+                session()->forget(['promotion_id', 'promotion_code', 'discount_amount', 'final_total']);
+            }
+
             if (!$checkoutId) {
                 // Nếu tạo checkout thất bại, vẫn giữ booking nhưng log lỗi
-                \Log::error('Failed to create checkout', [
+                Log::error('Failed to create checkout', [
                     'bookingId' => $bookingId,
                     'dataCheckout' => $dataCheckout
                 ]);
@@ -203,14 +229,14 @@ class BookingController extends Controller
                 'checkoutId' => $checkoutId ?? null,
             ]);
 
-        } catch (\Illuminate\Validation\ValidationException $e) {
+        } catch (ValidationException $e) {
             // Validation errors
             return redirect()->back()
                 ->withErrors($e->errors())
                 ->withInput();
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             // Log lỗi
-            \Log::error('Error creating booking', [
+            Log::error('Error creating booking', [
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString(),
                 'request' => $req->all()
@@ -356,7 +382,7 @@ class BookingController extends Controller
             ];
     
             // Log request để debug - TRƯỚC KHI GỬI
-            \Log::info('MoMo Payment Request', [
+            Log::info('MoMo Payment Request', [
                 'rawHash' => $rawHash,
                 'signature' => $signature,
                 'data' => $requestData,
@@ -368,7 +394,7 @@ class BookingController extends Controller
             // Log response để debug - SAU KHI NHẬN
             $statusCode = $response->status();
             $responseBody = $response->json();
-            \Log::info('MoMo Payment Response', [
+            Log::info('MoMo Payment Response', [
                 'status' => $statusCode,
                 'body' => $responseBody,
             ]);
@@ -394,7 +420,7 @@ class BookingController extends Controller
                         $errorMessage = "MoMo không trả về payUrl. Response: " . json_encode($responseBody);
                     }
                     
-                    \Log::error('MoMo Payment Error', [
+                    Log::error('MoMo Payment Error', [
                         'resultCode' => $resultCode,
                         'message' => $message,
                         'response' => $responseBody,
@@ -409,7 +435,7 @@ class BookingController extends Controller
             } else {
                 // HTTP error (status code != 200)
                 $errorBody = $response->body();
-                \Log::error('MoMo Payment HTTP Error', [
+                Log::error('MoMo Payment HTTP Error', [
                     'status' => $response->status(),
                     'body' => $errorBody,
                 ]);
@@ -420,9 +446,9 @@ class BookingController extends Controller
                     'details' => $errorBody
                 ], 500);
             }
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             // Log exception
-            \Log::error('MoMo Payment Exception', [
+            Log::error('MoMo Payment Exception', [
                 'message' => $e->getMessage(),
                 'trace' => $e->getTraceAsString(),
             ]);
@@ -453,7 +479,7 @@ class BookingController extends Controller
         $errorCode = $request->query('errorCode');
         
         // Log để debug
-        \Log::info('MoMo Return URL called', [
+        Log::info('MoMo Return URL called', [
             'resultCode' => $resultCode,
             'transId' => $transId,
             'orderId' => $orderId,
@@ -573,7 +599,7 @@ class BookingController extends Controller
         $message = $request->input('message') ?? $request->query('message');
         
         // Log để debug
-        \Log::info('MoMo Callback Received (deprecated - use handleMomoReturn)', [
+        Log::info('MoMo Callback Received (deprecated - use handleMomoReturn)', [
             'resultCode' => $resultCode,
             'transId' => $transIdMomo,
             'orderId' => $orderId,
@@ -886,7 +912,7 @@ class BookingController extends Controller
                 'transactionId' => $transIdMomo ?? $orderId ?? null,
             ]);
             
-            \Log::info('Saved booking with pending payment', [
+            Log::info('Saved booking with pending payment', [
                 'bookingId' => $bookingId,
                 'checkoutId' => $checkoutId,
                 'customTourId' => $customTourId,
@@ -899,8 +925,8 @@ class BookingController extends Controller
                 'checkoutId' => $checkoutId,
             ];
             
-        } catch (\Exception $e) {
-            \Log::error('Error saving booking with pending payment', [
+        } catch (Exception $e) {
+            Log::error('Error saving booking with pending payment', [
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString(),
             ]);
@@ -969,7 +995,7 @@ class BookingController extends Controller
                 'transactionId' => $transIdMomo ?? $orderId,
             ]);
             
-            \Log::info('Auto saved booking after MoMo success', [
+            Log::info('Auto saved booking after MoMo success', [
                 'bookingId' => $bookingId,
                 'checkoutId' => $checkoutId,
                 'customTourId' => $customTourId,
@@ -982,8 +1008,8 @@ class BookingController extends Controller
                 'checkoutId' => $checkoutId,
             ];
             
-        } catch (\Exception $e) {
-            \Log::error('Error auto saving booking after MoMo success', [
+        } catch (Exception $e) {
+            Log::error('Error auto saving booking after MoMo success', [
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString(),
             ]);
@@ -1043,20 +1069,39 @@ class BookingController extends Controller
             
             $bookingId = DB::table('tbl_booking')->insertGetId($bookingDataInsert);
             
-            // 5. Insert vào tbl_checkout với paymentStatus = 'y' (đã thanh toán)
+            // 5. Lấy thông tin promotion từ session nếu có
+            $promotionId = session('promotion_id');
+            $promotionCode = session('promotion_code');
+            $discountAmount = session('discount_amount', 0);
+            $finalTotal = session('final_total', $totalPrice);
+
+            // Insert vào tbl_checkout với paymentStatus = 'y' (đã thanh toán)
             $checkoutId = DB::table('tbl_checkout')->insertGetId([
                 'bookingId' => $bookingId,
                 'paymentMethod' => 'momo-payment',
                 'amount' => $totalPrice,
                 'paymentStatus' => 'y', // Đã thanh toán
                 'transactionId' => $transIdMomo ?? $orderId,
+                'promotion_id' => $promotionId,
+                'promotion_code' => $promotionCode,
+                'discount_amount' => $discountAmount,
+                'final_total' => $finalTotal,
             ]);
+
+            // Nếu có promotion, tăng usage_count và xóa session
+            if ($promotionId) {
+                DB::table('tbl_promotions')
+                    ->where('id', $promotionId)
+                    ->increment('usage_count');
+                
+                session()->forget(['promotion_id', 'promotion_code', 'discount_amount', 'final_total']);
+            }
             
             // 6. Cập nhật số lượng tour
             $newQuantity = max(0, $tour->quantity - $totalPeople);
             $this->tour->updateTours($tourId, ['quantity' => $newQuantity]);
             
-            \Log::info('Auto saved normal tour booking after MoMo success', [
+            Log::info('Auto saved normal tour booking after MoMo success', [
                 'bookingId' => $bookingId,
                 'checkoutId' => $checkoutId,
                 'tourId' => $tourId,
@@ -1069,8 +1114,8 @@ class BookingController extends Controller
                 'checkoutId' => $checkoutId,
             ];
             
-        } catch (\Exception $e) {
-            \Log::error('Error auto saving normal tour booking after MoMo success', [
+        } catch (Exception $e) {
+            Log::error('Error auto saving normal tour booking after MoMo success', [
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString(),
             ]);
@@ -1130,20 +1175,39 @@ class BookingController extends Controller
             
             $bookingId = DB::table('tbl_booking')->insertGetId($bookingDataInsert);
             
-            // 5. Insert vào tbl_checkout với paymentStatus = 'n' (chưa thanh toán)
+            // 5. Lấy thông tin promotion từ session nếu có
+            $promotionId = session('promotion_id');
+            $promotionCode = session('promotion_code');
+            $discountAmount = session('discount_amount', 0);
+            $finalTotal = session('final_total', $totalPrice);
+
+            // Insert vào tbl_checkout với paymentStatus = 'n' (chưa thanh toán)
             $checkoutId = DB::table('tbl_checkout')->insertGetId([
                 'bookingId' => $bookingId,
                 'paymentMethod' => 'momo-payment',
                 'amount' => $totalPrice,
                 'paymentStatus' => 'n', // Chưa thanh toán
                 'transactionId' => $transIdMomo ?? $orderId ?? null,
+                'promotion_id' => $promotionId,
+                'promotion_code' => $promotionCode,
+                'discount_amount' => $discountAmount,
+                'final_total' => $finalTotal,
             ]);
+
+            // Nếu có promotion, tăng usage_count và xóa session
+            if ($promotionId) {
+                DB::table('tbl_promotions')
+                    ->where('id', $promotionId)
+                    ->increment('usage_count');
+                
+                session()->forget(['promotion_id', 'promotion_code', 'discount_amount', 'final_total']);
+            }
             
             // 6. Cập nhật số lượng tour
             $newQuantity = max(0, $tour->quantity - $totalPeople);
             $this->tour->updateTours($tourId, ['quantity' => $newQuantity]);
             
-            \Log::info('Saved normal tour booking with pending payment', [
+            Log::info('Saved normal tour booking with pending payment', [
                 'bookingId' => $bookingId,
                 'checkoutId' => $checkoutId,
                 'tourId' => $tourId,
@@ -1156,8 +1220,8 @@ class BookingController extends Controller
                 'checkoutId' => $checkoutId,
             ];
             
-        } catch (\Exception $e) {
-            \Log::error('Error saving normal tour booking with pending payment', [
+        } catch (Exception $e) {
+            Log::error('Error saving normal tour booking with pending payment', [
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString(),
             ]);
@@ -1180,7 +1244,7 @@ class BookingController extends Controller
         $message = $request->input('message');
         
         // Log IPN để debug
-        \Log::info('MoMo IPN Received', [
+        Log::info('MoMo IPN Received', [
             'resultCode' => $resultCode,
             'transId' => $transIdMomo,
             'orderId' => $orderId,
@@ -1196,13 +1260,13 @@ class BookingController extends Controller
         if ($resultCode == '0') {
             // Thanh toán thành công - có thể tự động cập nhật booking
             // TODO: Tự động cập nhật trạng thái booking nếu cần
-            \Log::info('MoMo IPN: Payment successful', ['orderId' => $orderId, 'transId' => $transIdMomo]);
+            Log::info('MoMo IPN: Payment successful', ['orderId' => $orderId, 'transId' => $transIdMomo]);
         } elseif ($resultCode == '1006' || $resultCode == '1005') {
             // Đang xử lý
-            \Log::info('MoMo IPN: Payment pending', ['orderId' => $orderId, 'transId' => $transIdMomo]);
+            Log::info('MoMo IPN: Payment pending', ['orderId' => $orderId, 'transId' => $transIdMomo]);
         } else {
             // Thất bại
-            \Log::warning('MoMo IPN: Payment failed', ['orderId' => $orderId, 'resultCode' => $resultCode, 'message' => $message]);
+            Log::warning('MoMo IPN: Payment failed', ['orderId' => $orderId, 'resultCode' => $resultCode, 'message' => $message]);
         }
         
         // Trả về response cho MoMo
@@ -1212,7 +1276,7 @@ class BookingController extends Controller
     /**
      * Endpoint để test giả lập thanh toán thành công (chỉ dùng trong development)
      */
-    public function testMomoPaymentSuccess($customTourId = null, Request $request = null)
+    public function testMomoPaymentSuccess(?int $customTourId = null, ?Request $request = null): RedirectResponse
     {
         // CHỈ cho phép trong môi trường local/development
         if (app()->environment('production')) {
@@ -1230,7 +1294,7 @@ class BookingController extends Controller
         }
         
         if (!$customTourId) {
-            \Log::error('testMomoPaymentSuccess: Missing customTourId', [
+            Log::error('testMomoPaymentSuccess: Missing customTourId', [
                 'session_customTourId' => session()->get('customTourId'),
                 'request_all' => $request ? $request->all() : [],
             ]);
@@ -1241,7 +1305,7 @@ class BookingController extends Controller
         // Kiểm tra custom tour có tồn tại không
         $customTour = DB::table('tbl_custom_tours')->where('id', $customTourId)->first();
         if (!$customTour) {
-            \Log::error('testMomoPaymentSuccess: Custom tour not found', ['customTourId' => $customTourId]);
+            Log::error('testMomoPaymentSuccess: Custom tour not found', ['customTourId' => $customTourId]);
             return redirect()->route('build-tour.result')
                 ->with('error', 'Phương án tour đã chọn không tồn tại hoặc đã bị xoá.');
         }
@@ -1249,7 +1313,7 @@ class BookingController extends Controller
         // Lấy thông tin booking từ session (nếu có)
         $pendingBookingData = session()->get('momo_pending_booking_data');
         
-        \Log::info('testMomoPaymentSuccess: Processing', [
+        Log::info('testMomoPaymentSuccess: Processing', [
             'customTourId' => $customTourId,
             'hasPendingBookingData' => !empty($pendingBookingData),
             'pendingBookingData' => $pendingBookingData,
@@ -1262,7 +1326,7 @@ class BookingController extends Controller
             
             $bookingResult = $this->autoSaveBookingAfterMomoSuccess($customTourId, $pendingBookingData, $transIdMomo, $orderId);
             
-            \Log::info('testMomoPaymentSuccess: Booking result', [
+            Log::info('testMomoPaymentSuccess: Booking result', [
                 'success' => $bookingResult['success'] ?? false,
                 'bookingId' => $bookingResult['bookingId'] ?? null,
                 'message' => $bookingResult['message'] ?? null,
@@ -1288,7 +1352,7 @@ class BookingController extends Controller
             }
         } else {
             // Nếu không có thông tin form trong session, thử lấy từ custom tour và tự động điền
-            \Log::warning('testMomoPaymentSuccess: No pending booking data in session', [
+            Log::warning('testMomoPaymentSuccess: No pending booking data in session', [
                 'customTourId' => $customTourId,
                 'session_data' => session()->all(),
             ]);

@@ -5,6 +5,7 @@ namespace App\Http\Controllers\admin;
 use App\Http\Controllers\Controller;
 use App\Models\admin\ToursModel;
 use Carbon\Carbon;
+use Exception;
 use Illuminate\Http\Request;
 use Intervention\Image\Facades\Image;
 
@@ -42,14 +43,18 @@ class ToursManagementController extends Controller
         $start_date = $request->input('start_date');
         $end_date = $request->input('end_date');
         $description = $request->input('description');
+        $location_lat = $request->input('location_lat');
+        $location_lng = $request->input('location_lng');
+        $end_lat = $request->input('end_lat');
+        $end_lng = $request->input('end_lng');
 
 
         // Chuyển start_date và end_date từ định dạng d/m/Y sang Y-m-d
         $startDate = Carbon::createFromFormat('d/m/Y', $start_date)->format('Y-m-d');
         $endDate = Carbon::createFromFormat('d/m/Y', $end_date)->format('Y-m-d');
 
-        // Tính số ngày giữa start_date và end_date
-        $days = Carbon::createFromFormat('Y-m-d', $startDate)->diffInDays(Carbon::createFromFormat('Y-m-d', $endDate));
+        // Tính số ngày giữa start_date và end_date (bao gồm cả ngày bắt đầu và ngày kết thúc)
+        $days = Carbon::createFromFormat('Y-m-d', $startDate)->diffInDays(Carbon::createFromFormat('Y-m-d', $endDate)) + 1;
 
         // Tính số đêm: số ngày - 1
         $nights = $days - 1;
@@ -69,7 +74,11 @@ class ToursManagementController extends Controller
             'domain' => $domain,
             'availability' => 0,
             'startDate' => $startDate,
-            'endDate' => $endDate
+            'endDate' => $endDate,
+            'location_lat' => $location_lat ?: null,
+            'location_lng' => $location_lng ?: null,
+            'end_lat' => $end_lat ?: null,
+            'end_lng' => $end_lng ?: null,
         ];
         // dd($dataTours);
 
@@ -134,7 +143,7 @@ class ToursManagementController extends Controller
             }
 
             return response()->json(['success' => false, 'message' => 'Failed to save image data'], 500);
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             // Xử lý lỗi bất ngờ
             return response()->json(['success' => false, 'message' => $e->getMessage()], 500);
         }
@@ -259,7 +268,7 @@ class ToursManagementController extends Controller
             }
 
             return response()->json(['success' => false, 'message' => 'Failed to save image data'], 500);
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             // Xử lý lỗi bất ngờ
             return response()->json(['success' => false, 'message' => $e->getMessage()], 500);
         }
@@ -284,11 +293,17 @@ class ToursManagementController extends Controller
     $startDate = Carbon::createFromFormat('d/m/Y', $start_date)->format('Y-m-d');
     $endDate   = Carbon::createFromFormat('d/m/Y', $end_date)->format('Y-m-d');
 
-    // Tính số ngày & đêm
-    $days   = Carbon::parse($startDate)->diffInDays(Carbon::parse($endDate));
+    // Tính số ngày & đêm (bao gồm cả ngày bắt đầu và ngày kết thúc)
+    $days   = Carbon::parse($startDate)->diffInDays(Carbon::parse($endDate)) + 1;
     $nights = $days - 1;
     $time   = "{$days} ngày {$nights} đêm";
     // =====================================
+
+    // Lấy tọa độ từ request
+    $location_lat = $request->input('location_lat');
+    $location_lng = $request->input('location_lng');
+    $end_lat = $request->input('end_lat');
+    $end_lng = $request->input('end_lng');
 
     $dataTours = [
         'title'       => $name,
@@ -305,6 +320,12 @@ class ToursManagementController extends Controller
         'time'        => $time,
         // nếu muốn bật lại tour khi sửa thì thêm:
         'availability'=> 1,
+        
+        // Thêm tọa độ
+        'location_lat' => $location_lat ?: null,
+        'location_lng' => $location_lng ?: null,
+        'end_lat' => $end_lat ?: null,
+        'end_lng' => $end_lng ?: null,
     ];
 
     // Xoá timeline + ảnh cũ

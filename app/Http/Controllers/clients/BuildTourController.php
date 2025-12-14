@@ -3,10 +3,16 @@
 namespace App\Http\Controllers\clients;
 
 use App\Http\Controllers\Controller;
+use App\Models\clients\User;
+use App\Services\MealService;
 use Carbon\Carbon;
+use Exception;
+use Illuminate\Database\QueryException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Session;
+
 
 class BuildTourController extends Controller
 {
@@ -162,7 +168,7 @@ class BuildTourController extends Controller
 
     // 11. TRẢ VỀ VIEW KẾT QUẢ
     return view('clients.build_tour_result', [
-        'title'                  => 'Gợi ý Tour theo yêu cầu',
+        'title'                  => 'Thiết kế Tour theo yêu cầu',
         'requestData'            => $requestData,
         'requestCode'            => $requestCode,
         'generatedTours'         => $generatedTours,
@@ -185,7 +191,7 @@ class BuildTourController extends Controller
         }
 
         return view('clients.build_tour_result', [
-            'title'         => 'Gợi ý Tour theo yêu cầu',
+            'title'         => 'Thiết kế Tour theo yêu cầu',
             'requestData'   => $requestData,
             'requestCode'   => $requestCode,
             'generatedTours'=> $generatedTours,
@@ -356,7 +362,7 @@ public function showOptionDetail($index, Request $request)
     $endDate   = null;
 
     if ($startDate && !empty($chosenTour['days'])) {
-        $endDate = \Carbon\Carbon::parse($startDate)
+        $endDate = Carbon::parse($startDate)
             ->addDays($chosenTour['days'] - 1)
             ->format('Y-m-d');
     }
@@ -410,7 +416,7 @@ protected function generateTourOptions(array $requestData, string $requestCode):
     $children      = (int) ($requestData['children'] ?? 0);
     $totalPeople   = max($adults + $children, 1);
     $baseBudget    = $requestData['budget_per_person'];
-    $hotelLevelRaw = $requestData['hotel_level'];
+    $hotelLevelRaw = $requestData['hotel_level'] ?? 'Chưa biết'; // Đảm bảo có giá trị mặc định
     $intensity     = $requestData['intensity'];
     $tourType      = $requestData['tour_type'] ?? 'group';   // 'group' / 'private'
 
@@ -732,18 +738,13 @@ if ($intensity === 'Nhẹ') {
     }
 
     // ================== 2.5. Ước lượng ăn uống + di chuyển ==================
-    // ================== 2.5. Ước lượng ăn uống + di chuyển ==================
-    $hotelLevelLower = mb_strtolower($hotelLevelRaw);
-
-    // Ăn uống theo hạng khách sạn
-    if (str_contains($hotelLevelLower, 'resort') || str_contains($hotelLevelLower, '4-5') || str_contains($hotelLevelLower, '5')) {
-        $foodCostPerDay = 300000;   // resort / 4-5 sao
-    } elseif (str_contains($hotelLevelLower, '3-4') || str_contains($hotelLevelLower, '4') || str_contains($hotelLevelLower, '3')) {
-        $foodCostPerDay = 250000;   // 3-4 sao
-    } else {
-        $foodCostPerDay = 180000;   // 1-2 sao / nhà nghỉ
-    }
-    $foodCostPerPerson = $foodCostPerDay * $days;
+    // Sử dụng MealService để tính giá ăn uống mặc định dựa trên số bữa thực tế
+    $mealService = new MealService();
+    $foodTotal = $mealService->calculateDefaultFoodCost($hotelLevelRaw, $days, $adults, $children);
+    
+    // Tính foodCostPerPerson để hiển thị (chia cho tổng số người với hệ số trẻ em)
+    $totalPeopleFactor = $adults + ($children * 0.7);
+    $foodCostPerPerson = $totalPeopleFactor > 0 ? (int) round($foodTotal / $totalPeopleFactor / 1000) * 1000 : 0;
 
     // Di chuyển nội bộ (không bao gồm vé máy bay)
     $transportBaseDays      = max($days, 2);
@@ -760,8 +761,8 @@ if ($intensity === 'Nhẹ') {
             $start = new \DateTime($requestData['start_date']);
             $dow   = (int) $start->format('N'); // 1=Mon ... 7=Sun
 
-            // Thứ 6–7–CN: +2%
-            if ($dow >= 5) {
+            // Thứ 7–CN: +2%
+            if ($dow >= 6) {
                 $highSeasonRate += 0.02;
             }
 
@@ -770,13 +771,15 @@ if ($intensity === 'Nhẹ') {
             if ($month === 1 || $month === 2) {
                 $highSeasonRate += 0.05;
             }
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             // ignore
         }
     }
 
     // ================== 3. Cấu hình gói & hệ số giá ==================
-    $isUnknownHotelLvl = $hotelLevelRaw === '' ||
+    // Tạo $hotelLevelLower một cách an toàn để kiểm tra
+    $hotelLevelLower = mb_strtolower($hotelLevelRaw ?? '');
+    $isUnknownHotelLvl = empty($hotelLevelRaw) ||
         str_contains($hotelLevelLower, 'chưa biết') ||
         str_contains($hotelLevelLower, 'unknown');
 
@@ -1296,12 +1299,12 @@ public function checkoutCustomTour($id, Request $request)
         $userId = $request->session()->get('userId');
         if (!$userId) {
             $username = session()->get('username');
-            $userModel = new \App\Models\clients\User();
+            $userModel = new User();
             $userId = $userModel->getUserId($username);
             $request->session()->put('userId', $userId);
         }
         if ($userId) {
-            $userModel = new \App\Models\clients\User();
+            $userModel = new User();
             $user = $userModel->getUser($userId);
         }
     }
@@ -1386,7 +1389,7 @@ public function submitCustomTourBooking($id, Request $request)
         $bookingData['paymentStatus'] = 'n'; // 'n' = chưa thanh toán
         
         $bookingId = DB::table('tbl_booking')->insertGetId($bookingData);
-    } catch (\Illuminate\Database\QueryException $e) {
+    } catch (QueryException $e) {
         // Nếu lỗi do cột không tồn tại, thử lại không có paymentMethod/paymentStatus
         if (str_contains($e->getMessage(), 'Unknown column')) {
             unset($bookingData['paymentMethod']);
@@ -1398,12 +1401,260 @@ public function submitCustomTourBooking($id, Request $request)
         }
     }
 
-    // 6. Xoá session id checkout (nếu muốn)
+    // 6. Tạo checkout cho booking (nếu chưa có) - đặc biệt cho thanh toán tại văn phòng
+    $paymentMethod = $request->input('payment', 'office-payment'); // Mặc định là thanh toán tại văn phòng
+    
+    try {
+        $checkoutId = DB::table('tbl_checkout')->insertGetId([
+            'bookingId' => $bookingId,
+            'paymentMethod' => $paymentMethod,
+            'amount' => $totalPrice,
+            'paymentStatus' => 'n', // 'n' = chưa thanh toán (sẽ thanh toán tại văn phòng)
+        ]);
+    } catch (QueryException $e) {
+        // Nếu có lỗi (ví dụ cột không tồn tại), bỏ qua
+        $checkoutId = null;
+    }
+
+    // 7. Xoá session id checkout (nếu muốn)
     Session::forget('custom_tour_checkout_id');
 
-    // 7. Redirect đến trang tour-booked với bookingId (custom tour không có checkoutId)
+    // 8. Redirect đến trang tour-booked với bookingId
     return redirect()->route('tour-booked', ['bookingId' => $bookingId])
         ->with('success', 'Bạn đã đặt tour theo yêu cầu thành công! Chúng tôi sẽ liên hệ xác nhận trong thời gian sớm nhất.');
 }
+
+    /**
+     * Cập nhật meal plan cho phương án tour
+     */
+    public function updateMeals($index, Request $request)
+    {
+        $mealService = new MealService();
+        
+        // Lấy dữ liệu từ session
+        $requestData = $request->session()->get('build_tour.requestData');
+        $generatedTours = $request->session()->get('build_tour.generatedTours');
+        
+        if (!$requestData || !$generatedTours) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Phiên làm việc đã hết hạn, vui lòng thiết kế tour lại.'
+            ], 400);
+        }
+
+        // Tìm option theo index
+        $option = null;
+        foreach ($generatedTours as $tour) {
+            if (isset($tour['option_index']) && (int)$tour['option_index'] === (int)$index) {
+                $option = $tour;
+                break;
+            }
+        }
+
+        if (!$option) {
+            $arrayIndex = (int)$index - 1;
+            if (isset($generatedTours[$arrayIndex])) {
+                $option = $generatedTours[$arrayIndex];
+            }
+        }
+
+        if (!$option) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Phương án tour không tồn tại.'
+            ], 404);
+        }
+
+        // Validate meal plan
+        // Thử lấy từ nhiều nguồn
+        $mealPlan = $request->input('meal_plan', []);
+        
+        // Nếu không có trong input, thử lấy từ JSON
+        if (empty($mealPlan) && $request->isJson()) {
+            $jsonData = $request->json()->all();
+            $mealPlan = $jsonData['meal_plan'] ?? [];
+        }
+        
+        // Log để debug
+        Log::info('Update meal plan request', [
+            'index' => $index,
+            'meal_plan_received' => $mealPlan,
+            'meal_plan_count' => count($mealPlan),
+            'request_all' => $request->all(),
+            'request_json' => $request->json()->all(),
+            'content_type' => $request->header('Content-Type'),
+            'is_json' => $request->isJson(),
+            'method' => $request->method()
+        ]);
+        
+        // Nếu meal_plan rỗng, trả về lỗi
+        if (empty($mealPlan)) {
+            Log::error('Meal plan is empty', [
+                'request_all' => $request->all(),
+                'request_json' => $request->json()->all()
+            ]);
+            return response()->json([
+                'success' => false,
+                'message' => 'Dữ liệu meal plan không được gửi. Vui lòng thử lại.',
+                'debug' => [
+                    'request_all' => $request->all(),
+                    'request_json' => $request->json()->all()
+                ]
+            ], 400);
+        }
+        
+        $validation = $mealService->validateMealPlan($mealPlan);
+        
+        if (!$validation['valid']) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Dữ liệu meal plan không hợp lệ: ' . implode(', ', $validation['errors'])
+            ], 400);
+        }
+
+        // Lấy số người
+        $adults = (int) ($requestData['adults'] ?? 1);
+        $children = (int) ($requestData['children'] ?? 0);
+        $days = $option['days'] ?? $requestData['days'] ?? 1;
+        
+        // Lấy price_breakdown
+        $priceBreakdown = $option['price_breakdown'] ?? [];
+        $packageMultiplier = $priceBreakdown['package_multiplier'] ?? 1.0;
+        
+        // Lấy hotel level
+        $hotelLevelRaw = $requestData['hotel_level'] ?? '';
+
+        // Tính chi phí ăn uống mới (dùng thuật toán mới với multiplier, phân biệt bữa chuẩn và bữa thêm)
+        $newMealCost = $mealService->calculateCustomMealCost($mealPlan, $days, $adults, $children, $hotelLevelRaw);
+        
+        // Tính chi phí ăn uống cũ
+        $oldMealCost = $mealService->calculateOldMealCost($priceBreakdown, $adults, $children);
+        
+        // Lưu giá trị cũ để tính chênh lệch
+        $oldTotalPrice = (int) ($option['total_price'] ?? 0);
+
+        // Cập nhật meal_plan vào option
+        $option['meal_plan'] = $mealPlan;
+
+        // Tính giá ăn uống mới / người (sau hệ số gói)
+        // Tính giá ăn uống / người (trước hệ số gói)
+        $baseFoodPerPerson = $newMealCost / max($adults + $children * 0.7, 1);
+        $baseFoodPerPerson = (int) round($baseFoodPerPerson / 1000) * 1000;
+        
+        // Áp dụng hệ số gói
+        $newFoodPerPerson = (int) round($baseFoodPerPerson * $packageMultiplier / 1000) * 1000;
+        
+        if (!isset($option['price_breakdown'])) {
+            $option['price_breakdown'] = [];
+        }
+        
+        // Lấy giá trị cũ
+        $oldFoodPerPerson = $priceBreakdown['food_per_person'] ?? 0;
+        $oldBaseFoodPerPerson = $oldFoodPerPerson / $packageMultiplier;
+        
+        // Tính chênh lệch giá ăn uống (sau hệ số gói)
+        $foodPriceDiff = $newFoodPerPerson - $oldFoodPerPerson;
+        
+        // Cập nhật meal_plan và food_per_person
+        $option['price_breakdown']['food_per_person'] = $newFoodPerPerson;
+        $option['price_breakdown']['meal_plan'] = $mealPlan;
+        $option['meal_plan'] = $mealPlan;
+        
+        // Tính lại core_cost_after_multiplier (tổng 4 mục sau hệ số gói)
+        $hotelCost = $priceBreakdown['hotel_per_person'] ?? 0;
+        $activityCost = $priceBreakdown['activity_per_person'] ?? 0;
+        $transportCost = $priceBreakdown['transport_per_person'] ?? 0;
+        $newCoreCostAfterMultiplier = $hotelCost + $newFoodPerPerson + $activityCost + $transportCost;
+        
+        $option['price_breakdown']['core_cost_after_multiplier'] = $newCoreCostAfterMultiplier;
+        
+        // Tính lại base_before_discount_per_person
+        $serviceFeeAfterMultiplier = $priceBreakdown['service_fee_after_multiplier'] ?? 0;
+        $surchargeAfterMultiplier = $priceBreakdown['surcharge_after_multiplier'] ?? 0;
+        $newBaseBeforeDiscount = $newCoreCostAfterMultiplier + $serviceFeeAfterMultiplier + $surchargeAfterMultiplier;
+        
+        $option['price_breakdown']['base_before_discount_per_person'] = $newBaseBeforeDiscount;
+        
+        // Tính lại giá người lớn và trẻ em (áp dụng giảm giá đoàn)
+        $groupDiscountFactor = $priceBreakdown['group_discount_factor'] ?? 1.0;
+        $newPricePerAdult = (int) round($newBaseBeforeDiscount * $groupDiscountFactor / 1000) * 1000;
+        $childFactor = $priceBreakdown['child_factor'] ?? 0.75;
+        $newPricePerChild = (int) round($newPricePerAdult * $childFactor / 1000) * 1000;
+        
+        // Cập nhật giá
+        $option['price_per_adult'] = $newPricePerAdult;
+        $option['price_per_child'] = $newPricePerChild;
+        $option['total_price_adults'] = $newPricePerAdult * $adults;
+        $option['total_price_children'] = $newPricePerChild * $children;
+        $option['total_price'] = $option['total_price_adults'] + $option['total_price_children'];
+        
+        // Cập nhật price_breakdown
+        $option['price_breakdown']['adult_price'] = $newPricePerAdult;
+        $option['price_breakdown']['child_price'] = $newPricePerChild;
+        $option['price_breakdown']['total_price_adults'] = $option['total_price_adults'];
+        $option['price_breakdown']['total_price_children'] = $option['total_price_children'];
+        $option['price_breakdown']['final_total_price'] = $option['total_price'];
+        
+        // Tính discount amount
+        $undiscountedTotal = (int) round($newBaseBeforeDiscount * ($adults + $children) / 1000) * 1000;
+        $discountAmountTotal = $undiscountedTotal - $option['total_price'];
+        $option['price_breakdown']['undiscounted_total'] = $undiscountedTotal;
+        $option['price_breakdown']['discount_amount_total'] = $discountAmountTotal;
+
+        // Cập nhật lại generatedTours trong session
+        $found = false;
+        foreach ($generatedTours as $idx => $tour) {
+            if (isset($tour['option_index']) && (int)$tour['option_index'] === (int)$index) {
+                $generatedTours[$idx] = $option;
+                $found = true;
+                break;
+            }
+        }
+        
+        // Fallback nếu không tìm thấy theo option_index
+        if (!$found) {
+            $arrayIndex = (int)$index - 1;
+            if (isset($generatedTours[$arrayIndex])) {
+                $generatedTours[$arrayIndex] = $option;
+                $found = true;
+            }
+        }
+
+        if (!$found) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Không thể cập nhật tour trong session. Vui lòng thử lại.'
+            ], 500);
+        }
+
+        // Lưu lại vào session
+        $request->session()->put('build_tour.generatedTours', $generatedTours);
+        
+        // Log để debug
+        Log::info('Meal plan updated', [
+            'index' => $index,
+            'option_index' => $option['option_index'] ?? null,
+            'meal_plan_keys' => array_keys($mealPlan),
+            'new_total_price' => $option['total_price'],
+            'old_total_price' => $oldTotalPrice
+        ]);
+
+        // Tính chênh lệch giá
+        $priceDiff = $option['total_price'] - $oldTotalPrice;
+        
+        return response()->json([
+            'success' => true,
+            'message' => 'Cập nhật ăn uống thành công!',
+            'data' => [
+                'meal_plan' => $mealPlan,
+                'new_total_price' => $option['total_price'],
+                'old_total_price' => $oldTotalPrice,
+                'price_diff' => $priceDiff,
+                'price_per_adult' => $newPricePerAdult,
+                'price_per_child' => $newPricePerChild,
+                'food_per_person' => $newFoodPerPerson,
+            ]
+        ]);
+    }
 
 }

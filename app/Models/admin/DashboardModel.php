@@ -12,20 +12,32 @@ class DashboardModel extends Model
 
     public function getSummary()
     {
+        // Tổng số tours đang hoạt động
         $tourWorking = DB::table('tbl_tours')
             ->where('availability', 1)
             ->count();
+        
+        // Tổng số lượt booking (không tính đã hủy)
         $countBooking = DB::table('tbl_booking')
             ->where('bookingStatus', '!=', 'c')
             ->count();
+        
+        // Tổng số người dùng đăng ký
+        $totalUsers = DB::table('tbl_users')
+            ->count();
+        
+        // Tổng doanh thu: ưu tiên dùng final_total (đã trừ khuyến mãi), nếu không có thì dùng amount
+        // COALESCE sẽ lấy final_total nếu > 0, ngược lại lấy amount
         $totalAmount = DB::table('tbl_checkout')
             ->where('paymentStatus', 'y')
-            ->sum('amount');
+            ->selectRaw('SUM(CASE WHEN final_total > 0 THEN final_total ELSE amount END) as total')
+            ->value('total') ?? 0;
 
         // Trả về mảng chứa các dữ liệu tổng hợp
         return [
             'tourWorking' => $tourWorking,
             'countBooking' => $countBooking,
+            'totalUsers' => $totalUsers,
             'totalAmount' => $totalAmount,
         ];
     }

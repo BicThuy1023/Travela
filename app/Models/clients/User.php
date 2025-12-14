@@ -11,6 +11,7 @@ class User extends Model
     use HasFactory;
 
     protected $table = 'tbl_users';
+    protected $primaryKey = 'userId';
 
     public function getUserId($username)
     {

@@ -30,6 +30,9 @@ use App\Http\Controllers\clients\PayPalController;
 use App\Http\Controllers\clients\SearchController;
 use App\Http\Controllers\clients\TourBookedController;
 use App\Http\Controllers\clients\BuildTourController;
+use App\Http\Controllers\clients\PromotionController;
+use App\Http\Controllers\admin\PromotionManagementController;
+use App\Http\Controllers\admin\ReviewManagementController;
 
 use App\Http\Controllers\Dev\ToolController;
 
@@ -70,6 +73,10 @@ Route::get('/build-tour/detail/{index}', [BuildTourController::class, 'showOptio
 // NEW: Chọn phương án (đặt tour)
 Route::post('/build-tour/choose/{index}', [BuildTourController::class, 'chooseTour'])
     ->name('build-tour.choose');
+
+// NEW: Cập nhật meal plan
+Route::post('/build-tour/update-meals/{index}', [BuildTourController::class, 'updateMeals'])
+    ->name('build-tour.update-meals');
 // ================== CHECKOUT CUSTOM TOUR (sau khi chọn phương án) ==================
 
 // Sau khi chọn phương án → sang trang đặt tour
@@ -188,6 +195,11 @@ Route::get('/tour-booked', [TourBookedController::class, 'index'])
 
 Route::post('/cancel-booking', [TourBookedController::class, 'cancelBooking'])->name('cancel-booking');
 
+// ================== Promotion (Mã khuyến mãi) ==================
+
+Route::get('/promotions', [PromotionController::class, 'index'])->name('client.promotions.index');
+Route::post('/promotions/apply', [PromotionController::class, 'applyCode'])->name('client.promotions.apply');
+Route::post('/promotions/remove', [PromotionController::class, 'removeCode'])->name('client.promotions.remove');
 
 // ================== Contact ==================
 
@@ -256,4 +268,22 @@ Route::prefix('admin')->middleware('admin')->group(function () {
     // Quản lý liên hệ
     Route::get('/contact', [ContactManagementController::class, 'index'])->name('admin.contact');
     Route::post('/reply-contact', [ContactManagementController::class, 'replyContact'])->name('admin.reply-contact');
+
+    // Quản lý mã khuyến mãi
+    Route::resource('promotions', PromotionManagementController::class)->names([
+        'index' => 'admin.promotions.index',
+        'create' => 'admin.promotions.create',
+        'store' => 'admin.promotions.store',
+        'show' => 'admin.promotions.show',
+        'edit' => 'admin.promotions.edit',
+        'update' => 'admin.promotions.update',
+        'destroy' => 'admin.promotions.destroy',
+    ]);
+    Route::post('promotions/{promotion}/toggle-status', [PromotionManagementController::class, 'toggleStatus'])
+        ->name('admin.promotions.toggle-status');
+
+    // Quản lý đánh giá
+    Route::get('reviews', [ReviewManagementController::class, 'index'])->name('admin.reviews.index');
+    Route::delete('reviews/{id}', [ReviewManagementController::class, 'destroy'])->name('admin.reviews.destroy');
+    Route::post('reviews/{id}/toggle', [ReviewManagementController::class, 'toggleVisibility'])->name('admin.reviews.toggle');
 });

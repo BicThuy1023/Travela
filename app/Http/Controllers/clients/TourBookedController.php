@@ -5,9 +5,11 @@ namespace App\Http\Controllers\clients;
 use App\Http\Controllers\Controller;
 use App\Models\clients\Booking;
 use App\Models\clients\Tours;
+use App\Models\clients\User;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 class TourBookedController extends Controller
 {
@@ -46,7 +48,7 @@ class TourBookedController extends Controller
             $paymentStatus = $tour_booked->paymentStatus ?? null;
             
             // Log để debug (đặc biệt cho bookingId=73)
-            \Log::info('TourBookedController: Checking canCancel', [
+            Log::info('TourBookedController: Checking canCancel', [
                 'bookingId' => $bookingId,
                 'checkoutId' => $checkoutId,
                 'bookingStatus' => $bookingStatus,
@@ -61,16 +63,16 @@ class TourBookedController extends Controller
                 if (!empty($startDate)) {
                     $today = Carbon::today();
                     $startDateCarbon = Carbon::parse($startDate);
-                    
+
                     // Tính số ngày từ hôm nay đến ngày khởi hành (signed difference)
                     // Nếu startDate trong tương lai: diffInDays sẽ dương
                     // Nếu startDate trong quá khứ: diffInDays sẽ âm
                     $diffInDays = $today->diffInDays($startDateCarbon, false);
-                    
+
                     // Có thể hủy nếu còn >= 3 ngày trước ngày khởi hành
                     $canCancel = $diffInDays >= 3;
                     
-                    \Log::info('TourBookedController: Calculated canCancel', [
+                    Log::info('TourBookedController: Calculated canCancel', [
                         'bookingId' => $bookingId,
                         'today' => $today->format('Y-m-d'),
                         'startDate' => $startDateCarbon->format('Y-m-d'),
@@ -81,12 +83,12 @@ class TourBookedController extends Controller
                     // Nếu không có startDate (ví dụ: tour đang thỏa thuận), cho phép hủy
                     $canCancel = true;
                     
-                    \Log::info('TourBookedController: No startDate, allowing cancel', [
+                    Log::info('TourBookedController: No startDate, allowing cancel', [
                         'bookingId' => $bookingId,
                     ]);
                 }
-            } else {
-                \Log::info('TourBookedController: Cannot cancel - booking status', [
+        } else {
+                Log::info('TourBookedController: Cannot cancel - booking status', [
                     'bookingId' => $bookingId,
                     'bookingStatus' => $bookingStatus,
                 ]);
@@ -107,7 +109,7 @@ class TourBookedController extends Controller
         $isCustomTour = $req->has('isCustomTour') && $req->isCustomTour == '1';
 
         // Log để debug
-        \Log::info('TourBookedController: cancelBooking called', [
+        Log::info('TourBookedController: cancelBooking called', [
             'bookingId' => $bookingId,
             'checkoutId' => $checkoutId,
             'isCustomTour' => $isCustomTour,
@@ -119,7 +121,7 @@ class TourBookedController extends Controller
         $tour_booked = $this->tour->tourBooked($bookingId, $checkoutId);
         
         if (!$tour_booked) {
-            \Log::warning('TourBookedController: cancelBooking - tour not found', [
+            Log::warning('TourBookedController: cancelBooking - tour not found', [
                 'bookingId' => $bookingId,
                 'checkoutId' => $checkoutId,
                 'isCustomTour' => $isCustomTour,
@@ -152,12 +154,12 @@ class TourBookedController extends Controller
         $userId = null;
         if (session()->has('username')) {
             $username = session()->get('username');
-            $userModel = new \App\Models\clients\User();
+            $userModel = new User();
             $userId = $userModel->getUserId($username);
         }
         
         if (!$userId) {
-            \Log::warning('TourBookedController: cancelBooking - user not logged in', [
+            Log::warning('TourBookedController: cancelBooking - user not logged in', [
                 'bookingId' => $bookingId,
             ]);
             toastr()->error('Bạn cần đăng nhập để hủy tour!', 'Thông báo');
@@ -171,7 +173,7 @@ class TourBookedController extends Controller
             ->first();
             
         if (!$bookingRecord) {
-            \Log::warning('TourBookedController: cancelBooking - booking not found or not owned by user', [
+            Log::warning('TourBookedController: cancelBooking - booking not found or not owned by user', [
                 'bookingId' => $bookingId,
                 'userId' => $userId,
             ]);
@@ -182,16 +184,16 @@ class TourBookedController extends Controller
         // Chỉ cập nhật quantity cho tour thông thường (không phải custom tour)
         $updateQuantity = true; // Mặc định true cho custom tour
         if (!$isCustomTour && $tourId) {
-            $tour = $this->tour->getTourDetail($tourId);
+        $tour = $this->tour->getTourDetail($tourId);
             if ($tour) {
-                $currentQuantity = $tour->quantity;
-                // Tính toán số lượng trả lại
+        $currentQuantity = $tour->quantity;
+        // Tính toán số lượng trả lại
                 $return_quantity = ($quantityAdults ?? 0) + ($quantityChildren ?? 0);
-                // Cập nhật lại số lượng mới cho tour
-                $newQuantity = $currentQuantity + $return_quantity;
-                $updateQuantity = $this->tour->updateTours($tourId, ['quantity' => $newQuantity]);
-                
-                \Log::info('TourBookedController: cancelBooking - updated tour quantity', [
+        // Cập nhật lại số lượng mới cho tour
+        $newQuantity = $currentQuantity + $return_quantity;
+        $updateQuantity = $this->tour->updateTours($tourId, ['quantity' => $newQuantity]);
+
+                Log::info('TourBookedController: cancelBooking - updated tour quantity', [
                     'tourId' => $tourId,
                     'oldQuantity' => $currentQuantity,
                     'returnQuantity' => $return_quantity,
@@ -203,7 +205,7 @@ class TourBookedController extends Controller
         // Hủy booking (áp dụng cho cả tour thông thường và custom tour)
         $updateBooking = $this->booking->cancelBooking($bookingId);
         
-        \Log::info('TourBookedController: cancelBooking - result', [
+        Log::info('TourBookedController: cancelBooking - result', [
             'bookingId' => $bookingId,
             'isCustomTour' => $isCustomTour,
             'updateQuantity' => $updateQuantity,

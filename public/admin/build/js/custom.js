@@ -2274,9 +2274,9 @@ function init_SmartWizard() {
                 var startDateFormatted = new Date(convertDateFormat(startDate));
                 var endDateFormatted = new Date(convertDateFormat(endDate));
 
-                // Tính số ngày giữa start_date và end_date
+                // Tính số ngày giữa start_date và end_date (bao gồm cả ngày bắt đầu và ngày kết thúc)
                 var timeDifference = endDateFormatted - startDateFormatted;
-                var daysDifference = timeDifference / (1000 * 3600 * 24); // Chuyển đổi từ milliseconds sang ngày
+                var daysDifference = Math.floor(timeDifference / (1000 * 3600 * 24)) + 1; // Chuyển đổi từ milliseconds sang ngày và cộng thêm 1
 
                 // Lấy ngày hôm nay
                 var today = new Date();

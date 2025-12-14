@@ -142,6 +142,12 @@ $(document).ready(function () {
                     $("input[name='price_child']").val(tour.priceChild);
                     $("#start_date").val(startDate);
                     $("#end_date").val(endDate);
+                    
+                    // Điền dữ liệu tọa độ
+                    $("input[name='location_lat']").val(tour.location_lat || '');
+                    $("input[name='location_lng']").val(tour.location_lng || '');
+                    $("input[name='end_lat']").val(tour.end_lat || '');
+                    $("input[name='end_lng']").val(tour.end_lng || '');
 
                     // Đảm bảo CKEditor đã sẵn sàng
                     CKEDITOR.instances["description"].on(
@@ -285,6 +291,10 @@ $(document).ready(function () {
                         start_date: $("#start_date").val(),
                         end_date: $("#end_date").val(),
                         description: description,
+                        location_lat: $("input[name='location_lat']").val() || null,
+                        location_lng: $("input[name='location_lng']").val() || null,
+                        end_lat: $("input[name='end_lat']").val() || null,
+                        end_lng: $("input[name='end_lng']").val() || null,
                         _token: $('input[name="_token"]').val(),
                         images: [],
                         timeline: [],
@@ -461,6 +471,12 @@ $(document).ready(function () {
         e.preventDefault();
         var tourId = $(this).data("tourid");
         var urlDelete = $(this).attr("href");
+        var tourTitle = $(this).closest('tr').find('td:first').text() || 'tour này';
+
+        // Hiển thị xác nhận trước khi xóa
+        if (!confirm('Bạn có chắc chắn muốn xóa tour "' + tourTitle + '" không?\n\nHành động này không thể hoàn tác!')) {
+            return;
+        }
 
         var csrfToken = $('meta[name="csrf-token"]').attr("content");
 
@@ -474,13 +490,26 @@ $(document).ready(function () {
             success: function (response) {
                 if (response.success) {
                     $("#tbody-listTours").html(response.data);
-                    toastr.success(response.message);
+                    toastr.success(response.message || 'Xóa tour thành công!', 'Thành công', {
+                        timeOut: 3000,
+                        progressBar: true
+                    });
                 } else {
-                    toastr.error(response.message);
+                    toastr.error(response.message || 'Không thể xóa tour. Vui lòng thử lại.', 'Lỗi', {
+                        timeOut: 5000,
+                        progressBar: true
+                    });
                 }
             },
             error: function (xhr, textStatus, errorThrown) {
-                toastr.error("Có lỗi xảy ra. Vui lòng thử lại sau.");
+                var errorMessage = 'Có lỗi xảy ra khi xóa tour.';
+                if (xhr.responseJSON && xhr.responseJSON.message) {
+                    errorMessage = xhr.responseJSON.message;
+                }
+                toastr.error(errorMessage, 'Lỗi', {
+                    timeOut: 5000,
+                    progressBar: true
+                });
             },
         });
     });

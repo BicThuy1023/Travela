@@ -12,6 +12,7 @@ class Tours extends Model
     use HasFactory;
 
     protected $table = 'tbl_tours';
+    protected $primaryKey = 'tourId';
 
     //Lấy tất cả tours
     public function getAllTours($perPage = 9)
@@ -97,17 +98,22 @@ class Tours extends Model
 
         if (!empty($filters)) {
             foreach ($filters as $filter) {
-                if ($filter[0] !== 'averageRating') {
-                    $getTours = $getTours->where($filter[0], $filter[1], $filter[2]);
+                // Bỏ qua averageRating vì sẽ xử lý riêng bằng HAVING
+                if ($filter[0] === 'averageRating') {
+                    continue;
                 }
+                $getTours = $getTours->where($filter[0], $filter[1], $filter[2]);
             }
         }
 
         // Áp dụng điều kiện về averageRating trong phần HAVING
         if (!empty($filters)) {
             foreach ($filters as $filter) {
-                if ($filter[0] === 'averageRating') {
-                    $getTours = $getTours->having('averageRating', $filter[1], $filter[2]); // Sử dụng HAVING để lọc averageRating
+                if ($filter[0] === 'averageRating' && $filter[1] === '>=') {
+                    // Lọc averageRating: >= giá trị (ví dụ: >= 4.0 cho 4 sao)
+                    $minRating = (float) $filter[2];
+                    $getTours = $getTours->havingRaw('COALESCE(AVG(tbl_reviews.rating), 0) >= ?', [$minRating])
+                                         ->havingRaw('COALESCE(AVG(tbl_reviews.rating), 0) < ?', [$minRating + 1]);
                 }
             }
         }
@@ -116,19 +122,35 @@ class Tours extends Model
             $getTours = $getTours->orderBy($sorting[0], $sorting[1]);
         }
 
-        // Thực hiện truy vấn để ghi log
-        $tours = $getTours->get();
+        // Thực hiện truy vấn với pagination nếu có
+        if ($perPage !== null) {
+            $tours = $getTours->paginate($perPage);
+        } else {
+            $tours = $getTours->get();
+        }
 
         // In ra câu lệnh SQL đã ghi lại (nếu cần thiết)
         $queryLog = DB::getQueryLog();
 
         /** @var \stdClass $tour */
         // Lấy danh sách hình ảnh cho mỗi tour
-        foreach ($tours as $tour) {
-            $tour->images = DB::table('tbl_images')
-                ->where('tourId', $tour->tourId)
-                ->pluck('imageUrl');
-            $tour->rating = $this->reviewStats($tour->tourId)->averageRating;
+        // Xử lý khác nhau cho paginator và collection
+        if ($tours instanceof \Illuminate\Pagination\LengthAwarePaginator) {
+            // Nếu là paginator, lấy items
+            foreach ($tours->items() as $tour) {
+                $tour->images = DB::table('tbl_images')
+                    ->where('tourId', $tour->tourId)
+                    ->pluck('imageUrl');
+                $tour->rating = $this->reviewStats($tour->tourId)->averageRating;
+            }
+        } else {
+            // Nếu là collection
+            foreach ($tours as $tour) {
+                $tour->images = DB::table('tbl_images')
+                    ->where('tourId', $tour->tourId)
+                    ->pluck('imageUrl');
+                $tour->rating = $this->reviewStats($tour->tourId)->averageRating;
+            }
         }
 
         // dd($queryLog); // In ra log truy vấn nếu cần thiết
@@ -212,6 +234,15 @@ class Tours extends Model
             $option = json_decode($customTour->option_json, true) ?? [];
             $priceBreakdown = $option['price_breakdown'] ?? [];
 
+            // Tính discount amount từ price_breakdown
+            $discountAmount = (int) ($priceBreakdown['discount_amount_total'] ?? 0);
+            
+            // Nếu không có discount_amount_total, tính từ undiscounted_total
+            if ($discountAmount == 0 && isset($priceBreakdown['undiscounted_total'])) {
+                $undiscountedTotal = (int) $priceBreakdown['undiscounted_total'];
+                $discountAmount = max(0, $undiscountedTotal - (int) $booking->totalPrice);
+            }
+
             // Tạo object giống với tour thông thường để view có thể sử dụng
             $booked = (object) [
                 'tourId' => 'CT-' . $customTour->id, // Mã custom tour
@@ -226,6 +257,7 @@ class Tours extends Model
                 'numAdults' => $booking->numAdults,
                 'numChildren' => $booking->numChildren,
                 'totalPrice' => $booking->totalPrice,
+                'discountAmount' => $discountAmount, // Thêm discount amount cho custom tour
                 'fullName' => $booking->fullName,
                 'email' => $booking->email,
                 'phoneNumber' => $booking->phoneNumber,

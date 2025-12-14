@@ -140,13 +140,22 @@
                                             </div>
                                             <!-- /.col -->
                                             <div class="col-md-6">
-                                                <p class="lead">Số tiền phải trả trước
-                                                    @if (isset($invoice_booking->startDate))
-                                                        {{ date('d-m-Y', strtotime($invoice_booking->startDate)) }}
-                                                    @else
-                                                        {{ date('d-m-Y', strtotime($invoice_booking->bookingDate)) }}
-                                                    @endif
-                                                </p>
+                                                @if(isset($invoice_booking->paymentStatus) && $invoice_booking->paymentStatus == 'y')
+                                                    <p class="lead" style="color: #28a745;">
+                                                        <i class="fa fa-check-circle"></i> Đã thanh toán
+                                                        @if (isset($invoice_booking->paymentDate))
+                                                            - {{ date('d-m-Y', strtotime($invoice_booking->paymentDate)) }}
+                                                        @endif
+                                                    </p>
+                                                @else
+                                                    <p class="lead">Số tiền phải trả trước
+                                                        @if (isset($invoice_booking->startDate))
+                                                            {{ date('d-m-Y', strtotime($invoice_booking->startDate)) }}
+                                                        @else
+                                                            {{ date('d-m-Y', strtotime($invoice_booking->bookingDate)) }}
+                                                        @endif
+                                                    </p>
+                                                @endif
                                                 <div class="table-responsive">
                                                     <table class="table">
                                                         <tbody>

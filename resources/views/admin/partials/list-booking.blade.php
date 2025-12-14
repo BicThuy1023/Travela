@@ -33,6 +33,10 @@
         <td>
             @if ($booking->paymentStatus == 'n')
                 <span class="badge badge-danger">Chưa thanh toán</span>
+            @elseif ($booking->bookingStatus == 'c' && $booking->paymentStatus == 'y')
+                <span class="badge badge-warning">
+                    <i class="fa fa-hourglass-half" style="margin-right: 4px;"></i>Đã hoàn tiền
+                </span>
             @else
                 <span class="badge badge-success">Đã thanh toán</span>
             @endif

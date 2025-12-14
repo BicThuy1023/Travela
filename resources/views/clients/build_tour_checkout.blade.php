@@ -275,12 +275,6 @@
 
                 </div>
 
-                {{-- Mã giảm giá --}}
-                <div class="order-coupon">
-                    <input type="text" class="coupon-input" placeholder="Mã giảm giá">
-                    <button type="button" class="apply-coupon">Áp dụng</button>
-                </div>
-
                 <button type="submit" class="booking-btn btn-submit-booking" id="btn-submit-booking">
                     Đặt tour ngay
                 </button>

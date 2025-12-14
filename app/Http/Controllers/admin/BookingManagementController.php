@@ -5,7 +5,9 @@ namespace App\Http\Controllers\admin;
 use App\Http\Controllers\Controller;
 use App\Models\admin\BookingModel;
 use Barryvdh\DomPDF\Facade\Pdf as PDF;
+use Exception;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 
 class BookingManagementController extends Controller
@@ -60,6 +62,13 @@ class BookingManagementController extends Controller
         $title = 'Chi tiết đơn đặt';
 
         $invoice_booking = $this->booking->getInvoiceBooking($bookingId);
+        
+        // Kiểm tra nếu booking không tồn tại
+        if (!$invoice_booking) {
+            return redirect()->route('admin.booking')
+                ->with('error', 'Không tìm thấy thông tin đặt tour với ID: ' . $bookingId);
+        }
+        
         // dd($invoice_booking);
         $hide='hide';
         if ($invoice_booking->transactionId == null) {
@@ -116,18 +125,34 @@ class BookingManagementController extends Controller
         }
 
         try {
-            // Gửi email thật
-            Mail::send('admin.emails.invoice', compact('invoice_booking'), function ($message) use ($invoice_booking) {
+            // Tạo PDF hóa đơn với font hỗ trợ tiếng Việt
+            $pdf = PDF::loadView('admin.pdf.invoice', compact('invoice_booking'))
+                ->setPaper('a4', 'portrait')
+                ->setOption('enable-local-file-access', true)
+                ->setOption('defaultFont', 'DejaVu Sans')
+                ->setOption('isRemoteEnabled', true)
+                ->setOption('isHtml5ParserEnabled', true)
+                ->setOption('isPhpEnabled', true)
+                ->setOption('isFontSubsettingEnabled', false);
+            
+            // Tên file PDF
+            $pdfFileName = 'Hoa_don_' . $invoice_booking->checkoutId . '_' . date('YmdHis') . '.pdf';
+            
+            // Gửi email với PDF đính kèm
+            Mail::send('admin.emails.invoice', compact('invoice_booking'), function ($message) use ($invoice_booking, $pdf, $pdfFileName) {
                 $message->to($invoice_booking->email)
-                    ->subject('Hóa đơn đặt tour của khách hàng ' . $invoice_booking->fullName);
+                    ->subject('Hóa đơn đặt tour của khách hàng ' . $invoice_booking->fullName)
+                    ->attachData($pdf->output(), $pdfFileName, [
+                        'mime' => 'application/pdf',
+                    ]);
             });
 
             return response()->json([
                 'success' => true,
-                'message' => 'Hóa đơn đã được gửi qua email thành công.',
+                'message' => 'Hóa đơn đã được gửi qua email kèm file PDF thành công.',
             ]);
-        } catch (\Exception $e) {
-            \Log::error('Error sending invoice email', [
+        } catch (Exception $e) {
+            Log::error('Error sending invoice email', [
                 'bookingId' => $bookingId,
                 'email' => $invoice_booking->email ?? 'N/A',
                 'error' => $e->getMessage(),

@@ -101,9 +101,9 @@
     position: absolute;
     bottom: 80px;
     right: 0;
-    width: 380px;
+    width: 450px;
     max-width: calc(100vw - 40px);
-    height: 600px;
+    height: 650px;
     max-height: calc(100vh - 100px);
     background: white;
     border-radius: 16px;
@@ -172,7 +172,7 @@
 
 .chatbot-message {
     display: flex;
-    max-width: 80%;
+    max-width: 85%;
     animation: fadeIn 0.3s ease;
 }
 
@@ -201,6 +201,9 @@
     padding: 12px 16px;
     border-radius: 18px;
     word-wrap: break-word;
+    max-width: 100%;
+    overflow-wrap: break-word;
+    word-break: break-word;
 }
 
 .user-message .message-content {

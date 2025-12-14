@@ -4,6 +4,8 @@ namespace App\Http\Controllers\admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\admin\BookingModel;
+use Carbon\Carbon;
+use Exception;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -57,6 +59,15 @@ class CustomTourController extends Controller
         // Lấy danh sách booking của custom tours
         $customBookings = $this->getCustomTourBookings();
         $customBookings = $this->updateHideBooking($customBookings);
+        
+        // Thêm start_date và end_date từ custom_tours vào booking để hiển thị
+        foreach ($customBookings as $booking) {
+            $customTour = DB::table('tbl_custom_tours')->where('id', $booking->custom_tour_id)->first();
+            if ($customTour) {
+                $booking->tour_start_date = $customTour->start_date ?? null;
+                $booking->tour_end_date = $customTour->end_date ?? null;
+            }
+        }
 
         return view('admin.custom-tours', compact('title', 'customTours', 'customBookings', 'activeTab'));
     }
@@ -68,11 +79,13 @@ class CustomTourController extends Controller
     {
         $bookings = DB::table('tbl_booking')
             ->join('tbl_custom_tours', 'tbl_booking.custom_tour_id', '=', 'tbl_custom_tours.id')
-            ->join('tbl_checkout', 'tbl_booking.bookingId', '=', 'tbl_checkout.bookingId')
+            ->leftJoin('tbl_checkout', 'tbl_booking.bookingId', '=', 'tbl_checkout.bookingId')
             ->whereNotNull('tbl_booking.custom_tour_id')
             ->select(
                 'tbl_booking.*',
                 'tbl_custom_tours.option_json',
+                'tbl_custom_tours.start_date',
+                'tbl_custom_tours.end_date',
                 'tbl_checkout.paymentMethod',
                 'tbl_checkout.paymentStatus',
                 'tbl_checkout.checkoutId'
@@ -99,7 +112,8 @@ class CustomTourController extends Controller
 
         foreach ($list_booking as $booking) {
             $booking->hide = 'hide';
-            if ($booking->paymentStatus === 'n') {
+            // Nếu không có checkout hoặc paymentStatus = 'n' (chưa thanh toán), hiển thị nút "Đã hoàn thành"
+            if ($booking->paymentStatus === null || $booking->paymentStatus === 'n') {
                 $booking->hide = '';
             }
             
@@ -272,21 +286,21 @@ class CustomTourController extends Controller
         // Chuyển đổi ngày từ d-m-Y sang Y-m-d (giống như trang tours)
         try {
             if ($startDate) {
-                $startDate = \Carbon\Carbon::createFromFormat('d-m-Y', $startDate)->format('Y-m-d');
+                $startDate = Carbon::createFromFormat('d-m-Y', $startDate)->format('Y-m-d');
             }
             if ($endDate) {
-                $endDate = \Carbon\Carbon::createFromFormat('d-m-Y', $endDate)->format('Y-m-d');
+                $endDate = Carbon::createFromFormat('d-m-Y', $endDate)->format('Y-m-d');
             }
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             // Thử format d/m/Y nếu d-m-Y không được
             try {
                 if ($startDate) {
-                    $startDate = \Carbon\Carbon::createFromFormat('d/m/Y', $startDate)->format('Y-m-d');
+                    $startDate = Carbon::createFromFormat('d/m/Y', $startDate)->format('Y-m-d');
                 }
                 if ($endDate) {
-                    $endDate = \Carbon\Carbon::createFromFormat('d/m/Y', $endDate)->format('Y-m-d');
+                    $endDate = Carbon::createFromFormat('d/m/Y', $endDate)->format('Y-m-d');
                 }
-            } catch (\Exception $e2) {
+            } catch (Exception $e2) {
                 return response()->json([
                     'success' => false,
                     'message' => 'Định dạng ngày không hợp lệ. Vui lòng nhập theo định dạng dd-mm-yyyy.',

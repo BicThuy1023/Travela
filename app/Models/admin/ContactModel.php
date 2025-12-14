@@ -14,8 +14,9 @@ class ContactModel extends Model
 
     public function getContacts()
     {
+        // Lấy tất cả liên hệ, sắp xếp: chưa phản hồi trước, sau đó mới đến đã phản hồi
         return DB::table($this->table)
-            ->where('isReply', 'n')
+            ->orderByRaw("CASE WHEN isReply = 'n' THEN 0 ELSE 1 END")
             ->orderBy('contactId', 'desc')
             ->get();
     }

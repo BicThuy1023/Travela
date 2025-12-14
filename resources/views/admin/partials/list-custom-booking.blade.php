@@ -21,9 +21,9 @@
             @endif
         </td>
         <td>
-            @if ($booking->paymentMethod == 'momo-payment')
+            @if (isset($booking->paymentMethod) && $booking->paymentMethod == 'momo-payment')
                 <img src="{{ asset('admin/assets/images/icon/icon_momo.png') }}" class="icon_payment" alt="">
-            @elseif ($booking->paymentMethod == 'paypal-payment')
+            @elseif (isset($booking->paymentMethod) && $booking->paymentMethod == 'paypal-payment')
                 <img src="{{ asset('admin/assets/images/icon/icon_paypal.png') }}" class="icon_payment" alt="">
             @else
                 <img src="{{ asset('admin/assets/images/icon/icon_office.png') }}" class="icon_payment" alt="">
@@ -31,8 +31,12 @@
         </td>
 
         <td>
-            @if ($booking->paymentStatus == 'n')
+            @if (!isset($booking->paymentStatus) || $booking->paymentStatus == 'n')
                 <span class="badge badge-danger">Chưa thanh toán</span>
+            @elseif ($booking->bookingStatus == 'c' && $booking->paymentStatus == 'y')
+                <span class="badge badge-warning">
+                    <i class="fa fa-hourglass-half" style="margin-right: 4px;"></i>Đã hoàn tiền
+                </span>
             @else
                 <span class="badge badge-success">Đã thanh toán</span>
             @endif

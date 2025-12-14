@@ -56,18 +56,19 @@
                                                         style="width:100%">
                                                         <thead>
                                                             <tr>
-                                                                <th style="width: 50px;">ID</th>
-                                                                <th style="width: 120px;">Mã tour</th>
-                                                                <th style="width: 150px;">Tên tour</th>
-                                                                <th style="width: 300px;">Mô tả</th>
-                                                                <th style="width: 120px;">Điểm đến</th>
-                                                                <th style="width: 100px;">Số lượng người lớn</th>
-                                                                <th style="width: 100px;">Số lượng trẻ em</th>
-                                                                <th style="width: 120px;">Giá ước tính</th>
-                                                                <th style="width: 80px;">Số lượt đặt</th>
-                                                                <th style="width: 120px;">Ngày tạo</th>
-                                                                <th style="width: 120px;">Lần đặt cuối</th>
-                                                                <th style="width: 150px;">Hành động</th>
+                                                                <th>ID</th>
+                                                                <th>Mã tour</th>
+                                                                <th>Tên tour</th>
+                                                                <th>Mô tả</th>
+                                                                <th>Điểm đến</th>
+                                                                <th>Số lượng người lớn</th>
+                                                                <th>Số lượng trẻ em</th>
+                                                                <th>Giá ước tính</th>
+                                                                <th>Số lượt đặt</th>
+                                                                <th>Ngày tạo</th>
+                                                                <th>Ngày bắt đầu</th>
+                                                                <th>Ngày kết thúc</th>
+                                                                <th>Hành động</th>
                                                             </tr>
                                                         </thead>
                                                         <tbody>
@@ -115,8 +116,15 @@
                                                                     </td>
                                                                     <td>{{ $tour->created_at ? \Carbon\Carbon::parse($tour->created_at)->format('d/m/Y H:i') : 'N/A' }}</td>
                                                                     <td>
-                                                                        @if ($tour->last_booking_date)
-                                                                            {{ \Carbon\Carbon::parse($tour->last_booking_date)->format('d/m/Y H:i') }}
+                                                                        @if ($tour->start_date)
+                                                                            {{ \Carbon\Carbon::parse($tour->start_date)->format('d/m/Y') }}
+                                                                        @else
+                                                                            <span class="text-muted">Chưa có</span>
+                                                                        @endif
+                                                                    </td>
+                                                                    <td>
+                                                                        @if ($tour->end_date)
+                                                                            {{ \Carbon\Carbon::parse($tour->end_date)->format('d/m/Y') }}
                                                                         @else
                                                                             <span class="text-muted">Chưa có</span>
                                                                         @endif

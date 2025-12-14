@@ -2,11 +2,14 @@
 
 namespace App\Http\Controllers;
 
+use Exception;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 use App\Models\clients\Tours;
 use App\Models\clients\Booking;
+use App\Models\clients\User;
 
 class AIController extends Controller
 {
@@ -151,7 +154,7 @@ PROMPT;
             ]);
 
             if (!$response->successful()) {
-                throw new \Exception('OpenAI API error: ' . $response->body());
+                throw new Exception('OpenAI API error: ' . $response->body());
             }
 
             $completion = $response->json();
@@ -162,7 +165,7 @@ PROMPT;
                 $functionName = $responseMessage['function_call']['name'];
                 $functionArgs = json_decode($responseMessage['function_call']['arguments'], true);
 
-                \Log::info("AI calling function: {$functionName}", $functionArgs);
+                Log::info("AI calling function: {$functionName}", $functionArgs);
 
                 $functionResult = null;
 
@@ -195,7 +198,7 @@ PROMPT;
                 ]);
 
                 if (!$secondResponse->successful()) {
-                    throw new \Exception('OpenAI API error: ' . $secondResponse->body());
+                    throw new Exception('OpenAI API error: ' . $secondResponse->body());
                 }
 
                 $secondCompletion = $secondResponse->json();
@@ -226,8 +229,8 @@ PROMPT;
                     ]
                 ]);
             }
-        } catch (\Exception $error) {
-            \Log::error('Chatbot error:', ['error' => $error->getMessage()]);
+        } catch (Exception $error) {
+            Log::error('Chatbot error:', ['error' => $error->getMessage()]);
 
             // Fallback response khi có lỗi
             return response()->json([
@@ -348,8 +351,8 @@ PROMPT;
                 'count' => count($result),
                 'tours' => $result
             ];
-        } catch (\Exception $error) {
-            \Log::error('Search tours error:', ['error' => $error->getMessage()]);
+        } catch (Exception $error) {
+            Log::error('Search tours error:', ['error' => $error->getMessage()]);
             return [
                 'success' => false,
                 'message' => 'Không thể tìm kiếm tour lúc này'
@@ -427,8 +430,8 @@ PROMPT;
                     'bookingLink' => route('booking', ['id' => $tour->tourId])
                 ]
             ];
-        } catch (\Exception $error) {
-            \Log::error('Get tour details error:', ['error' => $error->getMessage()]);
+        } catch (Exception $error) {
+            Log::error('Get tour details error:', ['error' => $error->getMessage()]);
             return [
                 'success' => false,
                 'message' => 'Không thể lấy thông tin tour'
@@ -470,8 +473,8 @@ PROMPT;
                 'destination' => $tour->destination ?? '',
                 'price' => (int) $tour->priceAdult
             ];
-        } catch (\Exception $error) {
-            \Log::error('Create booking link error:', ['error' => $error->getMessage()]);
+        } catch (Exception $error) {
+            Log::error('Create booking link error:', ['error' => $error->getMessage()]);
             return [
                 'success' => false,
                 'message' => 'Không thể tạo link đặt tour'
@@ -496,8 +499,8 @@ PROMPT;
                 'count' => $popularTours->count(),
                 'data' => $popularTours
             ]);
-        } catch (\Exception $error) {
-            \Log::error('Get popular tours error:', ['error' => $error->getMessage()]);
+        } catch (Exception $error) {
+            Log::error('Get popular tours error:', ['error' => $error->getMessage()]);
             return response()->json([
                 'success' => false,
                 'message' => 'Server error'
@@ -549,8 +552,8 @@ PROMPT;
                 'count' => $trendingDestinations->count(),
                 'data' => $trendingDestinations
             ]);
-        } catch (\Exception $error) {
-            \Log::error('Get trending destinations error:', ['error' => $error->getMessage()]);
+        } catch (Exception $error) {
+            Log::error('Get trending destinations error:', ['error' => $error->getMessage()]);
             return response()->json([
                 'success' => false,
                 'message' => 'Server error'
@@ -571,7 +574,7 @@ PROMPT;
             // Nếu không có userId, thử lấy từ username
             if (!$userId && $request->session()->has('username')) {
                 $username = $request->session()->get('username');
-                $userModel = new \App\Models\clients\User();
+                $userModel = new User();
                 $userId = $userModel->getUserId($username);
             }
 
@@ -598,8 +601,8 @@ PROMPT;
                 'count' => $recommendedTours->count(),
                 'data' => $recommendedTours
             ]);
-        } catch (\Exception $error) {
-            \Log::error('Get recommendations error:', ['error' => $error->getMessage()]);
+        } catch (Exception $error) {
+            Log::error('Get recommendations error:', ['error' => $error->getMessage()]);
             return response()->json([
                 'success' => false,
                 'message' => 'Server error'
@@ -620,7 +623,7 @@ PROMPT;
             // Nếu không có userId, thử lấy từ username
             if (!$userId && $request->session()->has('username')) {
                 $username = $request->session()->get('username');
-                $userModel = new \App\Models\clients\User();
+                $userModel = new User();
                 $userId = $userModel->getUserId($username);
             }
 
@@ -641,8 +644,8 @@ PROMPT;
                 'isPersonalized' => false,
                 'data' => $recommendedTours
             ]);
-        } catch (\Exception $error) {
-            \Log::error('Get personalized recommendations error:', ['error' => $error->getMessage()]);
+        } catch (Exception $error) {
+            Log::error('Get personalized recommendations error:', ['error' => $error->getMessage()]);
             return response()->json([
                 'success' => false,
                 'message' => 'Server error'

@@ -12,6 +12,18 @@ class Checkout extends Model
 
     protected $table = 'tbl_checkout';
 
+    protected $fillable = [
+        'bookingId',
+        'paymentMethod',
+        'amount',
+        'paymentStatus',
+        'transactionId',
+        'promotion_id',
+        'promotion_code',
+        'discount_amount',
+        'final_total',
+    ];
+
     public function createCheckout($data)
     {
         // Chèn dữ liệu và trả về ID của bản ghi vừa tạo

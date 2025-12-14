@@ -5,6 +5,7 @@ namespace App\Http\Controllers\clients;
 use App\Http\Controllers\Controller;
 use App\Models\clients\Tours;
 use Carbon\Carbon;
+use Exception;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\DB;
@@ -56,7 +57,7 @@ class SearchController extends Controller
                 if ($response->successful()) {
                     $resultTours = $response->json('related_tours') ?? [];
                 }
-            } catch (\Exception $e) {
+            } catch (Exception $e) {
                 // Xử lý lỗi khi gọi API
                 Log::error('Lỗi khi gọi API tìm kiếm tour (Python): ' . $e->getMessage());
             }
@@ -111,7 +112,7 @@ class SearchController extends Controller
         if ($startDateInput) {
             try {
                 $startDate = Carbon::createFromFormat('d/m/Y', $startDateInput)->format('Y-m-d');
-            } catch (\Exception $e) {
+            } catch (Exception $e) {
                 Log::warning('Invalid start_date format', ['error' => $e->getMessage()]);
             }
         }
@@ -119,7 +120,7 @@ class SearchController extends Controller
         if ($endDateInput) {
             try {
                 $endDate = Carbon::createFromFormat('d/m/Y', $endDateInput)->format('Y-m-d');
-            } catch (\Exception $e) {
+            } catch (Exception $e) {
                 Log::warning('Invalid end_date format', ['error' => $e->getMessage()]);
             }
         }

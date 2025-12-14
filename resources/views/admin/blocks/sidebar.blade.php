@@ -28,7 +28,7 @@
             <div class="menu_section">
                 <h3>Tổng quan</h3>
                 <ul class="nav side-menu">
-                    <li><a href="{{ route('admin.dashboard') }}"><i class="fa fa-dashboard"></i> Dashboard</a> </li>
+                    <li><a href="{{ route('admin.dashboard') }}"><i class="fa fa-dashboard"></i> Thống kê</a> </li>
                     <li><a href="{{ route('admin.admin') }}"><i class="fa fa-table"></i> Quản lý Admin</a> </li>
                     <li><a href="{{ route('admin.users') }}"><i class="fa fa-table"></i> Quản lý người dùng</a> </li>
                     <li><a><i class="fa fa-table"></i> Quản lý Tours<span class="fa fa-chevron-down"></span></a>
@@ -39,7 +39,11 @@
                         </ul>
                     </li>
 
-                    <li><a href="{{ route('admin.booking') }}"><i class="fa fa-home"></i> Quản lý Booking</a> </li>
+                    <li><a href="{{ route('admin.booking') }}"><i class="fa fa-home"></i> Quản lý đặt tours</a> </li>
+                    <li><a href="{{ route('admin.promotions.index') }}"><i class="fa fa-tag"></i> Khuyến mãi</a> </li>
+                    <li class="{{ request()->routeIs('admin.reviews.*') ? 'active' : '' }}"><a
+                            href="{{ route('admin.reviews.index') }}"><i class="fa fa-star"></i> <span>Đánh
+                                giá</span></a> </li>
                     <li><a href="{{ route('admin.contact') }}"><i class="fa fa-envelope-o"></i> Liên hệ </a> </li>
                 </ul>
             </div>

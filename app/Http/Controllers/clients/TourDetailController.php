@@ -4,25 +4,40 @@ namespace App\Http\Controllers\clients;
 
 use App\Http\Controllers\Controller;
 use App\Models\clients\Tours;
+use App\Services\RecommendationService;
+use Exception;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 class TourDetailController extends Controller
 {
 
     private $tours;
+    private $recommendationService;
 
     public function __construct()
     {
-        parent::__construct(); // Gọi constructor của Controller để khởi tạo $user
+        parent::__construct();
         $this->tours = new Tours();
+        $this->recommendationService = new RecommendationService();
     }
+    
     public function index($id = 0)
     {
         $title = 'Chi tiết tours';
         $userId = $this->getUserId();
 
         $tourDetail = $this->tours->getTourDetail($id);
+        
+        if ($tourDetail) {
+            try {
+                DB::table('tbl_tours')->where('tourId', $id)->increment('views');
+            } catch (Exception $e) {
+                Log::warning('Failed to increment views column (may not exist yet): ' . $e->getMessage());
+            }
+        }
+
         $getReviews = $this->tours->getReviews($id);
         $reviewStats = $this->tours->reviewStats($id);
 
@@ -36,37 +51,13 @@ class TourDetailController extends Controller
             $checkDisplay = 'hide';
         }
 
-        
-        // Gọi API Python để lấy danh sách tour liên quan
-        try {
-            $apiUrl = 'http://127.0.0.1:5555/api/tour-recommendations';
-            $response = Http::get($apiUrl, [
-                'tour_id' => $id
-            ]);
-
-            if ($response->successful()) {
-                $relatedTours = $response->json('related_tours');
-            } else {
-                $relatedTours = [];
-            }
-        } catch (\Exception $e) {
-            // Xử lý lỗi khi gọi API
-            $relatedTours = [];
-            \Log::error('Lỗi khi gọi API liên quan: ' . $e->getMessage());
-        }
-
-        $id_toursRe = $relatedTours;
-
-        $tourRecommendations = $this->tours->toursRecommendation($id_toursRe);
-        // dd($tourRecommendations);    
-        // dd($avgStar);
+        $tourRecommendations = $this->recommendationService->getSimilarTours($id);
 
         return view('clients.tour-detail', compact('title', 'tourDetail', 'getReviews', 'avgStar', 'countReview', 'checkDisplay','tourRecommendations'));
     }
 
     public function reviews(Request $req)
     {
-        // dd($req);
         $userId = $this->getUserId();
         $tourId = $req->tourId;
         $message = $req->message;
@@ -92,7 +83,6 @@ class TourDetailController extends Controller
         $avgStar = round($reviewStats->averageRating);
         $countReview = $reviewStats->reviewCount;
 
-        // Trả về phản hồi thành công
         return response()->json([
             'success' => true,
             'message' => 'Đánh giá của bạn đã được gửi thành công!',

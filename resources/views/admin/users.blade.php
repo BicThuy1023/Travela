@@ -26,7 +26,7 @@
                 <div class="clearfix"></div>
 
                 <div class="x_panel">
-                    <div class="x_content row">
+                    <div class="x_content row user-cards-container">
                         @foreach ($users as $user)
                             <div class="col-md-4 col-sm-4  profile_details">
                                 <div class="well profile_view">
@@ -42,7 +42,7 @@
                                         </div>
                                         <div class="right col-md-5 col-sm-5 text-center">
                                             <img src="{{ asset('admin/assets/images/user-profile/' . $user->avatar) }}"
-                                                alt="" class="img-circle img-fluid">
+                                                alt="" class="img-circle img-fluid user-avatar-fixed">
                                         </div>
                                     </div>
                                     <div class=" profile-bottom text-center">
@@ -95,3 +95,140 @@
     </div>
 </div>
 @include('admin.blocks.footer')
+
+<style>
+    /* Đảm bảo tất cả avatar có cùng kích thước */
+    .user-avatar-fixed {
+        width: 120px !important;
+        height: 120px !important;
+        object-fit: cover;
+        border-radius: 50%;
+        display: block;
+        margin: 0 auto;
+    }
+    
+    /* Đảm bảo các thẻ user card có cùng chiều cao và chiều rộng */
+    .user-cards-container {
+        display: flex;
+        flex-wrap: wrap;
+        margin: 0 -10px;
+    }
+    
+    .user-cards-container > .profile_details {
+        padding: 0 10px;
+        margin-bottom: 15px;
+        display: flex;
+        width: 100%;
+    }
+    
+    @media (min-width: 768px) {
+        .user-cards-container > .profile_details {
+            width: 50%;
+        }
+    }
+    
+    @media (min-width: 992px) {
+        .user-cards-container > .profile_details {
+            width: 33.333333%;
+        }
+    }
+    
+    /* Bỏ margin-bottom của các card ở hàng cuối */
+    .user-cards-container > .profile_details:last-child,
+    .user-cards-container > .profile_details:nth-last-child(2),
+    .user-cards-container > .profile_details:nth-last-child(3) {
+        margin-bottom: 0;
+    }
+    
+    @media (min-width: 768px) {
+        .user-cards-container > .profile_details:nth-last-child(-n+2) {
+            margin-bottom: 0;
+        }
+    }
+    
+    @media (min-width: 992px) {
+        .user-cards-container > .profile_details:nth-last-child(-n+3) {
+            margin-bottom: 0;
+        }
+    }
+    
+    .profile_view {
+        width: 100%;
+        min-height: 220px;
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+        padding: 10px;
+        margin-bottom: 0;
+    }
+    
+    .profile_view > .col-sm-12:first-child {
+        flex: 1;
+        min-height: 140px;
+        display: block;
+    }
+    
+    .profile_view .left {
+        min-height: 100px;
+    }
+    
+    .profile_view .left h2 {
+        margin-top: 5px;
+        margin-bottom: 5px;
+        font-size: 18px;
+    }
+    
+    .profile_view .left p {
+        margin-bottom: 5px;
+        font-size: 13px;
+    }
+    
+    .profile_view .left ul {
+        margin-bottom: 5px;
+        font-size: 12px;
+    }
+    
+    .profile_view .left ul li {
+        margin-bottom: 3px;
+    }
+    
+    .profile_view .right {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 90px;
+    }
+    
+    .profile-bottom {
+        margin-top: auto;
+        padding-top: 8px;
+        border-top: 1px solid #e0e0e0;
+        min-height: 45px;
+    }
+    
+    .profile-bottom .emphasis {
+        min-height: 30px;
+        align-items: center;
+    }
+    
+    .profile_view .brief {
+        margin-bottom: 8px;
+        font-size: 12px;
+    }
+    
+    /* Loại bỏ khoảng trắng dưới cùng */
+    .x_panel {
+        margin-bottom: 0;
+        padding-bottom: 0;
+    }
+    
+    .x_panel .x_content {
+        margin-bottom: 0;
+        padding-bottom: 0;
+    }
+    
+    .right_col[role="main"] > div:last-child {
+        margin-bottom: 0;
+        padding-bottom: 0;
+    }
+</style>

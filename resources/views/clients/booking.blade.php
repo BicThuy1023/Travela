@@ -135,10 +135,10 @@
                             <span class="child-price-display">{{ number_format($childPrice, 0, ',', '.') }} VNĐ</span>
                         </div>
                     </div>
-                    <div class="summary-item">
+                    <div class="summary-item" id="discount-row" style="display: none;">
                         <span>Giảm giá:</span>
                         <div>
-                            <span class="discount-amount">0 VNĐ</span>
+                            <span class="discount-amount" id="discountAmountDisplay">0 VNĐ</span>
                         </div>
                     </div>
                     <div class="summary-item total-price">
@@ -146,11 +146,17 @@
                         <span id="totalPriceDisplay">{{ number_format($totalPrice, 0, ',', '.') }} VNĐ</span>
                         <input type="hidden" id="totalPrice" name="totalPrice" value="{{ $totalPrice }}">
                     </div>
+                    <div class="summary-item" id="final-total-row" style="display: none;">
+                        <span><strong>Thành tiền:</strong></span>
+                        <span id="finalTotalDisplay" style="color: #ff6b6b; font-weight: bold;">0 VNĐ</span>
+                    </div>
                 </div>
                 <div class="order-coupon">
-                    <input type="text" placeholder="Mã giảm giá" style="width: 65%;">
-                    <button style="width: 30%" class="booking-btn btn-coupon">Áp dụng</button>
+                    <input type="text" id="promotionCode" placeholder="Nhập mã giảm giá" style="width: 65%;" value="">
+                    <button type="button" id="btn-apply-promotion" style="width: 30%" class="booking-btn btn-coupon">Áp dụng</button>
+                    <button type="button" id="btn-remove-promotion" style="width: 30%; display: none; margin-top: 5px;" class="booking-btn btn-danger">Hủy mã</button>
                 </div>
+                <div id="promotion-message" style="margin-top: 10px;"></div>
 
                 <div id="paypal-button-container"></div>
 
@@ -289,6 +295,133 @@
 
     // Khởi tạo giá ban đầu
     updateTotalPrice();
+
+    // ================== Xử lý mã khuyến mãi ==================
+    const promotionCodeInput = document.getElementById('promotionCode');
+    const btnApplyPromotion = document.getElementById('btn-apply-promotion');
+    const btnRemovePromotion = document.getElementById('btn-remove-promotion');
+    const promotionMessage = document.getElementById('promotion-message');
+    const discountRow = document.getElementById('discount-row');
+    const discountAmountDisplay = document.getElementById('discountAmountDisplay');
+    const finalTotalRow = document.getElementById('final-total-row');
+    const finalTotalDisplay = document.getElementById('finalTotalDisplay');
+
+    // Áp dụng mã khuyến mãi
+    if (btnApplyPromotion) {
+        btnApplyPromotion.addEventListener('click', function() {
+            const code = promotionCodeInput.value.trim();
+            const tourId = document.getElementById('tourId').value;
+            const totalPrice = document.getElementById('totalPrice').value;
+
+            if (!code) {
+                showPromotionMessage('Vui lòng nhập mã khuyến mãi', 'error');
+                return;
+            }
+
+            // Gọi API
+            fetch('{{ route("client.promotions.apply") }}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                },
+                body: JSON.stringify({
+                    code: code,
+                    tour_id: tourId,
+                    total: totalPrice
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Hiển thị thông tin giảm giá
+                    discountRow.style.display = 'flex';
+                    discountAmountDisplay.textContent = formatPrice(data.discount);
+                    finalTotalRow.style.display = 'flex';
+                    finalTotalDisplay.textContent = formatPrice(data.final_total);
+                    
+                    // Ẩn nút áp dụng, hiện nút hủy
+                    btnApplyPromotion.style.display = 'none';
+                    btnRemovePromotion.style.display = 'block';
+                    promotionCodeInput.disabled = true;
+                    
+                    showPromotionMessage(data.message, 'success');
+                } else {
+                    showPromotionMessage(data.message, 'error');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                showPromotionMessage('Có lỗi xảy ra khi áp dụng mã khuyến mãi', 'error');
+            });
+        });
+    }
+
+    // Hủy mã khuyến mãi
+    if (btnRemovePromotion) {
+        btnRemovePromotion.addEventListener('click', function() {
+            fetch('{{ route("client.promotions.remove") }}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                // Reset UI
+                discountRow.style.display = 'none';
+                finalTotalRow.style.display = 'none';
+                btnApplyPromotion.style.display = 'block';
+                btnRemovePromotion.style.display = 'none';
+                promotionCodeInput.disabled = false;
+                promotionCodeInput.value = '';
+                showPromotionMessage('Đã hủy áp dụng mã khuyến mãi', 'info');
+            })
+            .catch(error => {
+                console.error('Error:', error);
+            });
+        });
+    }
+
+    // Hàm hiển thị thông báo
+    function showPromotionMessage(message, type) {
+        if (!promotionMessage) return;
+        
+        promotionMessage.textContent = message;
+        promotionMessage.className = 'alert';
+        
+        if (type === 'success') {
+            promotionMessage.style.color = '#28a745';
+            promotionMessage.style.backgroundColor = '#d4edda';
+        } else if (type === 'error') {
+            promotionMessage.style.color = '#dc3545';
+            promotionMessage.style.backgroundColor = '#f8d7da';
+        } else {
+            promotionMessage.style.color = '#17a2b8';
+            promotionMessage.style.backgroundColor = '#d1ecf1';
+        }
+        
+        promotionMessage.style.padding = '10px';
+        promotionMessage.style.borderRadius = '4px';
+        promotionMessage.style.marginTop = '10px';
+        
+        // Tự động ẩn sau 5 giây
+        setTimeout(() => {
+            promotionMessage.textContent = '';
+            promotionMessage.style.display = 'none';
+        }, 5000);
+    }
+
+    // Khi tổng tiền thay đổi, cần áp lại mã nếu có
+    const originalUpdateTotalPrice = updateTotalPrice;
+    updateTotalPrice = function() {
+        originalUpdateTotalPrice();
+        // Nếu đã có mã khuyến mãi, cần áp lại
+        if (promotionCodeInput && promotionCodeInput.value && !promotionCodeInput.disabled) {
+            btnApplyPromotion.click();
+        }
+    };
 
     /**
      * Xử lý phương thức thanh toán - set giá trị vào hidden input

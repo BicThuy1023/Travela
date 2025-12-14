@@ -180,6 +180,42 @@
                                         </div>
                                     </div>
 
+                                    <div class="field item form-group">
+                                        <label class="col-form-label col-md-3 col-sm-3  label-align">Tọa độ điểm bắt đầu</label>
+                                        <div class="col-md-6 col-sm-6">
+                                            <div class="row">
+                                                <div class="col-md-6">
+                                                    <input class="form-control" type="number" step="0.0000001" name="location_lat"
+                                                        placeholder="Vĩ độ (Latitude)" id="location_lat">
+                                                    <small class="form-text text-muted">Ví dụ: 10.2899000</small>
+                                                </div>
+                                                <div class="col-md-6">
+                                                    <input class="form-control" type="number" step="0.0000001" name="location_lng"
+                                                        placeholder="Kinh độ (Longitude)" id="location_lng">
+                                                    <small class="form-text text-muted">Ví dụ: 103.9840000</small>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div class="field item form-group">
+                                        <label class="col-form-label col-md-3 col-sm-3  label-align">Tọa độ điểm kết thúc</label>
+                                        <div class="col-md-6 col-sm-6">
+                                            <div class="row">
+                                                <div class="col-md-6">
+                                                    <input class="form-control" type="number" step="0.0000001" name="end_lat"
+                                                        placeholder="Vĩ độ (Latitude)" id="end_lat">
+                                                    <small class="form-text text-muted">Ví dụ: 10.2899000</small>
+                                                </div>
+                                                <div class="col-md-6">
+                                                    <input class="form-control" type="number" step="0.0000001" name="end_lng"
+                                                        placeholder="Kinh độ (Longitude)" id="end_lng">
+                                                    <small class="form-text text-muted">Ví dụ: 103.9840000</small>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
                                     <div class="field item form-group bad">
                                         <label class="col-form-label col-md-3 col-sm-3  label-align">Mô
                                             tả<span>*</span></label>

@@ -256,7 +256,7 @@
                                     88</a></li>
                         </ul>
                     </div>
-                    @if (!empty($tourRecommendations))
+                    @if (!empty($tourRecommendations) && $tourRecommendations->isNotEmpty())
                         <div class="widget widget-tour" data-aos="fade-up" data-aos-duration="1500" data-aos-offset="50">
                             <h6 class="widget-title">Tours tương tự</h6>
                             @foreach ($tourRecommendations as $tour)

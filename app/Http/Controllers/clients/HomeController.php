@@ -6,62 +6,46 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Models\clients\Home;
 use App\Models\clients\Tours;
-use Illuminate\Support\Facades\Http;
-use Illuminate\Support\Facades\Log;
-use function PHPUnit\Framework\isEmpty;
+use App\Models\Promotion;
+use App\Services\RecommendationService;
+use Carbon\Carbon;
 
 class HomeController extends Controller
 {
     private $homeTours;
     private $tours;
+    private $recommendationService;
 
     public function __construct()
     {
         parent::__construct();
         $this->homeTours = new Home();
         $this->tours = new Tours();
+        $this->recommendationService = new RecommendationService();
     }
+    
     public function index()
     {
         $title = 'Trang chủ';
         $tours = $this->homeTours->getHomeTours();
 
         $userId = $this->getUserId();
+        $toursPopular = $this->recommendationService->getTrendingTours();
+        $userRecommendations = collect();
+
         if ($userId) {
-            
-            // Gọi API Python để lấy danh sách tour được gợi ý cho từng người dùng 
-            try {
-                $apiUrl = 'http://127.0.0.1:5555/api/user-recommendations';
-                $response = Http::get($apiUrl, [
-                    'user_id' => $userId
-                ]);
-
-                if ($response->successful()) {
-                    $tourIds = $response->json('recommended_tours');
-                } else {
-                    $tourIds = [];
-                }
-            } catch (\Exception $e) {
-                // Xử lý lỗi khi gọi API
-                $tourIds = [];
-                Log::error('Lỗi khi gọi API liên quan: ' . $e->getMessage());
-            }
-
-            $toursPopular = $this->tours->toursRecommendation($tourIds);
-
-            if (empty($tourIds)) {
-                $toursPopular = $this->tours->toursPopular(6);
-                
-            }
-
-            // dd($toursPopular);
-        }else {
-            $toursPopular = $this->tours->toursPopular(6);
+            $userRecommendations = $this->recommendationService->getUserRecommendations($userId);
         }
 
-        // dd($toursPopular);
-        return view('clients.home', compact('title', 'tours', 'toursPopular'));
+        // Lấy mã khuyến mãi nổi bật (tối đa 4 mã cho modal, hiển thị cả mã hết lượt)
+        $today = Carbon::today();
+        $promotions = Promotion::where('is_active', 1)
+            ->where('start_date', '<=', $today)
+            ->where('end_date', '>=', $today)
+            ->orderBy('created_at', 'DESC')
+            ->limit(4)
+            ->get();
+
+        return view('clients.home', compact('title', 'tours', 'toursPopular', 'userRecommendations', 'promotions'));
     }
-
-
 }

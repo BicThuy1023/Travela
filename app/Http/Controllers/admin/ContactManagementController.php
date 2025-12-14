@@ -4,6 +4,7 @@ namespace App\Http\Controllers\admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\admin\ContactModel;
+use Exception;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Mail;
 
@@ -50,7 +51,7 @@ class ContactManagementController extends Controller
                 'success' => true,
                 'message' => 'Phản hồi qua email thành công.',
             ]);
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             return response()->json([
                 'success' => false,
                 'message' => 'Không thể gửi email: ' . $e->getMessage(),

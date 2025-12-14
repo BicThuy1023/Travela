@@ -4,17 +4,21 @@ namespace App\Http\Controllers\clients;
 
 use App\Http\Controllers\Controller;
 use App\Models\clients\Tours;
+use App\Models\Promotion;
+use App\Services\RecommendationService;
 use Illuminate\Http\Request;
+use Carbon\Carbon;
 
 class ToursController extends Controller
 {
 
     private $tours;
-
+    private $recommendationService;
 
     public function __construct()
     {
         $this->tours = new Tours();
+        $this->recommendationService = new RecommendationService();
     }
 
     public function index(Request $request)
@@ -22,32 +26,42 @@ class ToursController extends Controller
         $title = 'Tours';
         $tours = $this->tours->getAllTours(9);
         $domain = $this->tours->getDomain();
-        // dd($tours);
         $domainsCount = [
             'mien_bac' => optional($domain->firstWhere('domain', 'b'))->count,
             'mien_trung' => optional($domain->firstWhere('domain', 't'))->count,
             'mien_nam' => optional($domain->firstWhere('domain', 'n'))->count,
         ];
 
-        // Kiểm tra nếu yêu cầu là AJAX
         if ($request->ajax()) {
             return response()->json([
                 'tours' => view('clients.partials.filter-tours', compact('tours'))->render(),
             ]);
         }
-        $toursPopular = $this->tours->toursPopular(2);
+        
+        $toursPopular = $this->recommendationService->getTrendingTours(3);
 
-        return view('clients.tours', compact('title', 'tours', 'domainsCount','toursPopular'));
+        // Lấy mã khuyến mãi đang hoạt động (tối đa 2 mã cho sidebar)
+        $today = Carbon::today();
+        $promotions = Promotion::where('is_active', 1)
+            ->where('start_date', '<=', $today)
+            ->where('end_date', '>=', $today)
+            ->where(function($query) {
+                $query->where('usage_limit', 0)
+                      ->orWhereRaw('usage_count < usage_limit');
+            })
+            ->orderBy('created_at', 'DESC')
+            ->limit(2)
+            ->get();
+
+        return view('clients.tours', compact('title', 'tours', 'domainsCount','toursPopular', 'promotions'));
     }
 
-    //Xử lý filter tours
     public function filterTours(Request $req)
     {
 
         $conditions = [];
         $sorting = [];
 
-        // Handle price filter
         if ($req->filled('minPrice') && $req->filled('maxPrice')) {
             $minPrice = $req->minPrice;
             $maxPrice = $req->maxPrice;
@@ -55,19 +69,18 @@ class ToursController extends Controller
             $conditions[] = ['priceAdult', '<=', $maxPrice];
         }
 
-        // Handle domain filter
         if ($req->filled('domain')) {
             $domain = $req->domain;
             $conditions[] = ['domain', '=', $domain];
         }
 
-        // Handle star rating filter
         if ($req->filled('star')) {
-            $star = (int) $req->star;
-            $conditions[] = ['averageRating', '=', $star];
+            $star = (float) $req->star;
+            // Lọc theo sao: >= star và < star + 1 (ví dụ: 4 sao = >= 4.0 và < 5.0)
+            $conditions[] = ['averageRating', '>=', $star];
+            $conditions[] = ['averageRating', '<', $star + 1];
         }
 
-        // Handle duration filter
         if ($req->filled('time')) {
             $duration = $req->time;
             $time = [
@@ -78,37 +91,28 @@ class ToursController extends Controller
             $conditions[] = ['time', '=', $time[$duration]];
         }
 
-        // Handle orderby filter
         if ($req->filled('sorting')) {
-            $sortingOption = trim($req->sorting); // Remove any whitespace
+            $sortingOption = trim($req->sorting);
 
-            // Handle sorting options
             if ($sortingOption == 'new') {
-                $sorting = ['tourId', 'DESC']; // Sort by creation date, newest first
+                $sorting = ['tourId', 'DESC'];
             } elseif ($sortingOption == 'old') {
-                $sorting = ['tourId', 'ASC']; // Sort by creation date, oldest first
+                $sorting = ['tourId', 'ASC'];
             } elseif ($sortingOption == "hight-to-low") {
-                $sorting = ['priceAdult', 'DESC']; // Sort by price in descending order
+                $sorting = ['priceAdult', 'DESC'];
             } elseif ($sortingOption == "low-to-high") {
-                $sorting = ['priceAdult', 'ASC']; // Sort by price in ascending order
+                $sorting = ['priceAdult', 'ASC'];
             }
         }
 
-        // dd($conditions);
-        $tours = $this->tours->filterTours($conditions, $sorting);
+        $tours = $this->tours->filterTours($conditions, $sorting, 9);
 
-        // If not paginated, simulate pagination
-        if (!$tours instanceof \Illuminate\Pagination\LengthAwarePaginator) {
-            // Create a fake paginator (pagination for non-paginated collection)
-            $tours = new \Illuminate\Pagination\LengthAwarePaginator(
-                $tours, // Collection
-                count($tours), // Total items
-                9, // Per page
-                1, // Current page
-                ['path' => url()->current()] // Path for pagination
-            );
+        // Đảm bảo paginator có query string để giữ filter khi chuyển trang
+        if ($tours instanceof \Illuminate\Pagination\LengthAwarePaginator) {
+            $tours->appends($req->query());
         }
 
+        // Trả về view (luôn trả về view, không cần check ajax vì route đã xử lý)
         return view('clients.partials.filter-tours', compact('tours'));
 
     }

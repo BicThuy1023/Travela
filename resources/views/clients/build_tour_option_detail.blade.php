@@ -49,12 +49,70 @@
     $discountPercent = (int) ($priceBreakdown['group_discount_percent'] ?? 0);
 @endphp
 
-{{-- ========== GALLERY ẢNH TOUR CUSTOM ========== --}}
+{{-- ========== GALLERY ẢNH TOUR CUSTOM - Mỗi tỉnh thành có ảnh khác nhau ========== --}}
 @php
+    // Lấy tỉnh thành đầu tiên từ main_destinations
+    $mainDestinations = $requestData['main_destinations'] ?? [];
+    $firstDestination = !empty($mainDestinations) ? $mainDestinations[0] : '';
+    
+    // Mapping tỉnh thành -> tên file ảnh (ảnh đầu tiên)
+    // Format: tên tỉnh thành -> tên file ảnh (không có extension)
+    $destinationImageMap = [
+        'hà nội' => 'hanoi',
+        'hanoi' => 'hanoi',
+        'hồ chí minh' => 'hochiminh',
+        'ho chi minh' => 'hochiminh',
+        'hochiminh' => 'hochiminh',
+        'sài gòn' => 'hochiminh',
+        'saigon' => 'hochiminh',
+        'đà nẵng' => 'danang',
+        'da nang' => 'danang',
+        'danang' => 'danang',
+        'hạ long' => 'halong',
+        'ha long' => 'halong',
+        'halong' => 'halong',
+        'hội an' => 'hoian',
+        'hoi an' => 'hoian',
+        'hoian' => 'hoian',
+        'huế' => 'hue',
+        'hue' => 'hue',
+        'nha trang' => 'nhatrang',
+        'nhatrang' => 'nhatrang',
+        'phú quốc' => 'phuquoc',
+        'phu quoc' => 'phuquoc',
+        'phuquoc' => 'phuquoc',
+        'sapa' => 'sapa',
+        'mù cang chải' => 'muongchai',
+        'mu cang chai' => 'muongchai',
+        'muongchai' => 'muongchai',
+    ];
+    
+    // Chuẩn hóa tên tỉnh thành để tìm ảnh (lowercase, trim)
+    $normalizedDestination = mb_strtolower(trim($firstDestination));
+    
+    // Tìm ảnh tương ứng với tỉnh thành
+    $imagePrefix = 'custom'; // Mặc định
+    if (!empty($normalizedDestination)) {
+        // Tìm trong mapping (kiểm tra cả chứa và bị chứa)
+        foreach ($destinationImageMap as $key => $value) {
+            if (str_contains($normalizedDestination, $key) || str_contains($key, $normalizedDestination)) {
+                $imagePrefix = $value;
+                break;
+            }
+        }
+    }
+    
+    // Kiểm tra file ảnh có tồn tại không
+    $customImagePath = public_path("clients/assets/images/custom-tour/{$imagePrefix}-1.jpg");
+    $firstImage = file_exists($customImagePath) 
+        ? asset("clients/assets/images/custom-tour/{$imagePrefix}-1.jpg")
+        : asset('clients/assets/images/custom-tour/custom-1.jpg'); // Fallback về ảnh mặc định
+    
+    // Tạo danh sách ảnh: ảnh đầu tiên theo tỉnh thành, 2 ảnh còn lại dùng mặc định
     $galleryImages = [
-        asset('clients/assets/images/custom-tour/custom-1.jpg'),
-        asset('clients/assets/images/custom-tour/custom-2.jpg'),
-        asset('clients/assets/images/custom-tour/custom-3.jpg'),
+        $firstImage, // Ảnh đầu theo tỉnh thành (hoặc mặc định nếu không có)
+        asset('clients/assets/images/custom-tour/custom-2.jpg'), // Ảnh 2 mặc định
+        asset('clients/assets/images/custom-tour/custom-3.jpg'), // Ảnh 3 mặc định
     ];
 @endphp
 {{-- ========== END GALLERY ========== --}}
@@ -90,7 +148,7 @@
                 </div>
             </div>
             <div class="col-lg-4 col-md-6">
-                <div class="gallery-item gallery-between">
+                <div class="gallery-item">
                     <img src="{{ $galleryImages[1] }}" alt="Ảnh tour 2">
                 </div>
             </div>
@@ -190,7 +248,12 @@
                 </div>
 
                 {{-- LỊCH TRÌNH: accordion --}}
-                <h3>Lịch trình</h3>
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h3 class="mb-0">Lịch trình</h3>
+                    <button type="button" class="btn btn-outline-primary btn-sm" data-bs-toggle="modal" data-bs-target="#mealPlanModal">
+                        <i class="far fa-utensils"></i> Chỉnh sửa ăn uống
+                    </button>
+                </div>
                 <div class="accordion-two mt-25 mb-40" id="build-tour-option-accordion">
                     @if (!empty($option['itinerary']))
                         @foreach ($option['itinerary'] as $idx => $day)
@@ -250,10 +313,43 @@
                                         @endif
 
                                         @if ($placesStr)
-                                            <p class="mb-0">
+                                            <p class="mb-2">
                                                 <strong>Điểm tham quan:</strong> {{ $placesStr }}
                                             </p>
                                         @endif
+                                        
+                                        {{-- Hiển thị mô tả ăn uống --}}
+                                        @php
+                                            $mealPlan = $option['meal_plan'] ?? [];
+                                            $dayId = $idx + 1;
+                                            $totalDays = count($option['itinerary']);
+                                            $dayMeals = $mealPlan[$dayId] ?? [];
+                                            $mealService = app(\App\Services\MealService::class);
+                                            $standardMeals = $mealService->getStandardMealsForDay($dayId, $totalDays);
+                                        @endphp
+                                        
+                                        <div class="meal-plan-info mt-3 pt-3 border-top">
+                                            <strong class="d-block mb-2">
+                                                <i class="far fa-utensils"></i> Chế độ ăn uống:
+                                            </strong>
+                                            <ul class="list-unstyled mb-0 small">
+                                                @foreach (['breakfast' => 'Buổi sáng', 'lunch' => 'Buổi trưa', 'dinner' => 'Buổi tối'] as $mealType => $timeLabel)
+                                                    @php
+                                                        // Chỉ hiển thị bữa có trong meal plan hoặc là bữa chuẩn
+                                                        if (!isset($dayMeals[$mealType]) && !in_array($mealType, $standardMeals)) {
+                                                            continue;
+                                                        }
+                                                        
+                                                        $meal = $dayMeals[$mealType] ?? ['level' => 'standard', 'type' => 'restaurant', 'self_pay' => false];
+                                                        $isExtraMeal = $mealService->isExtraMeal($dayId, $mealType, $totalDays);
+                                                        $description = $mealService->generateMealDescription($meal, $mealType, $dayId, $totalDays);
+                                                    @endphp
+                                                    <li class="mb-1">
+                                                        {!! $description !!}
+                                                    </li>
+                                                @endforeach
+                                            </ul>
+                                        </div>
                                     </div>
 
                                 </div>
@@ -537,8 +633,36 @@
     </div>
 </section>
 
-{{-- CSS nhỏ cho phần hoạt động tùy chọn --}}
+{{-- CSS cho gallery ảnh - đảm bảo các ảnh đều nhau --}}
 <style>
+    /* Gallery ảnh tour - đảm bảo tất cả ảnh có cùng kích thước */
+    .tour-gallery .gallery-item {
+        height: 400px; /* Chiều cao cố định */
+        overflow: hidden;
+        border-radius: 8px;
+    }
+    
+    .tour-gallery .gallery-item img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover; /* Đảm bảo ảnh phủ đầy không bị méo */
+        display: block;
+    }
+    
+    /* Responsive cho mobile */
+    @media (max-width: 768px) {
+        .tour-gallery .gallery-item {
+            height: 300px;
+        }
+    }
+    
+    @media (max-width: 576px) {
+        .tour-gallery .gallery-item {
+            height: 250px;
+        }
+    }
+
+    /* CSS cho phần hoạt động tùy chọn */
     .cost-row-optional-card {
         padding: 10px 12px;
         border-radius: 12px;
@@ -638,6 +762,626 @@
 
         updateTotal();
     })();
+</script>
+
+{{-- ========== MODAL CHỈNH SỬA ĂN UỐNG ========== --}}
+{{-- Modal phải nằm TRƯỚC @include footer để vẫn nằm trong body nhưng sau tất cả content --}}
+{{-- Bootstrap modal cần được đặt ở cấp độ body để hoạt động đúng --}}
+<div class="modal fade" id="mealPlanModal" tabindex="-1" aria-labelledby="mealPlanModalLabel" aria-hidden="true" data-bs-backdrop="true" data-bs-keyboard="true">
+    <div class="modal-dialog modal-xl modal-dialog-scrollable">
+        <div class="modal-content" style="pointer-events: auto;">
+            <div class="modal-header">
+                <h5 class="modal-title" id="mealPlanModalLabel">
+                    <i class="far fa-utensils"></i> Chỉnh sửa ăn uống
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="mealPlanForm" onsubmit="return false;">
+                    @csrf
+                    <input type="hidden" name="option_index" id="option_index_input" value="{{ $optionIndex }}">
+                    
+                    @if (!empty($option['itinerary']))
+                        @php
+                            $mealPlan = $option['meal_plan'] ?? [];
+                            $mealLevels = config('meals.levels');
+                            $mealTypes = config('meals.types');
+                        @endphp
+                        
+                        @foreach ($option['itinerary'] as $dayIdx => $day)
+                            @php
+                                $dayId = $dayIdx + 1;
+                                $dayMeals = $mealPlan[$dayId] ?? [];
+                            @endphp
+                            
+                            <div class="card mb-3">
+                                <div class="card-header bg-light">
+                                    <h6 class="mb-0">
+                                        <i class="far fa-calendar-day"></i> {{ $day['day'] }}
+                                    </h6>
+                                </div>
+                                <div class="card-body">
+                                    @php
+                                        // Xác định bữa chuẩn và bữa thêm cho ngày này
+                                        $dayId = $dayIdx + 1;
+                                        $totalDays = count($option['itinerary']);
+                                        $mealService = app(\App\Services\MealService::class);
+                                        $standardMeals = $mealService->getStandardMealsForDay($dayId, $totalDays);
+                                        
+                                        // Hiển thị tất cả 3 bữa, nhưng đánh dấu bữa thêm
+                                        $availableMeals = ['breakfast' => 'Ăn sáng', 'lunch' => 'Ăn trưa', 'dinner' => 'Ăn tối'];
+                                    @endphp
+                                    
+                                    @foreach ($availableMeals as $mealType => $mealLabel)
+                                        @php
+                                            $isExtraMeal = $mealService->isExtraMeal($dayId, $mealType, $totalDays);
+                                            
+                                            // Nếu là bữa thêm và chưa có trong meal_plan → mặc định tự túc (self_pay = true)
+                                            // Khách có thể bỏ check "Tự túc" để bao gồm bữa thêm vào giá tour
+                                            if ($isExtraMeal && !isset($dayMeals[$mealType])) {
+                                                $meal = [
+                                                    'level' => 'standard',
+                                                    'type' => 'restaurant',
+                                                    'self_pay' => true  // Bữa thêm mặc định tự túc
+                                                ];
+                                            } else {
+                                                // Bữa chuẩn hoặc đã có trong meal_plan → dùng giá trị từ meal_plan
+                                                $meal = $dayMeals[$mealType] ?? [
+                                                    'level' => 'standard',
+                                                    'type' => 'restaurant',
+                                                    'self_pay' => false  // Bữa chuẩn mặc định đã bao gồm
+                                                ];
+                                            }
+                                        @endphp
+                                        
+                                        @php
+                                            // fix: unique id/for for each meal - tạo id unique cho mỗi phần tử
+                                            $levelId = "meal_level_{$dayId}_{$mealType}";
+                                            $typeId = "meal_type_{$dayId}_{$mealType}";
+                                            $selfPayId = "meal_self_{$dayId}_{$mealType}";
+                                        @endphp
+                                        
+                                        <div class="row mb-3 pb-3 border-bottom">
+                                            <div class="col-md-3">
+                                                <label class="form-label fw-semibold">
+                                                    {{ $mealLabel }}
+                                                    @if ($isExtraMeal)
+                                                        <span class="badge bg-warning text-dark ms-1 small" title="Bữa ăn tùy chọn, sẽ tính thêm tiền nếu chọn">
+                                                            <i class="far fa-info-circle"></i> Bữa thêm
+                                                        </span>
+                                                    @else
+                                                        <span class="badge bg-success ms-1 small" title="Đã bao gồm trong giá tour">
+                                                            <i class="far fa-check-circle"></i> Đã bao gồm
+                                                        </span>
+                                                    @endif
+                                                </label>
+                                            </div>
+                                            <div class="col-md-3">
+                                                {{-- fix: unique id/for for each meal - label có for trỏ đúng id của select --}}
+                                                {{-- dùng select chuẩn, bỏ custom dropdown để tránh bug chồng option --}}
+                                                <label for="{{ $levelId }}" class="form-label small">Mức ăn</label>
+                                                <select id="{{ $levelId }}"
+                                                        name="meal_plan[{{ $dayId }}][{{ $mealType }}][level]" 
+                                                        class="form-select form-select-sm meal-level-select"
+                                                        data-no-nice-select="true">
+                                                    @foreach ($mealLevels as $key => $level)
+                                                        <option value="{{ $key }}" 
+                                                                {{ ($meal['level'] ?? 'standard') === $key ? 'selected' : '' }}>
+                                                            {{ $level['label'] }}
+                                                        </option>
+                                                    @endforeach
+                                                </select>
+                                            </div>
+                                            <div class="col-md-3">
+                                                {{-- fix: unique id/for for each meal - label có for trỏ đúng id của select --}}
+                                                {{-- dùng select chuẩn, bỏ custom dropdown để tránh bug chồng option --}}
+                                                <label for="{{ $typeId }}" class="form-label small">Hình thức</label>
+                                                <select id="{{ $typeId }}"
+                                                        name="meal_plan[{{ $dayId }}][{{ $mealType }}][type]" 
+                                                        class="form-select form-select-sm meal-type-select"
+                                                        data-no-nice-select="true">
+                                                    @foreach ($mealTypes as $key => $type)
+                                                        <option value="{{ $key }}" 
+                                                                {{ ($meal['type'] ?? 'restaurant') === $key ? 'selected' : '' }}>
+                                                            {{ $type }}
+                                                        </option>
+                                                    @endforeach
+                                                </select>
+                                            </div>
+                                            <div class="col-md-3">
+                                                <label class="form-label small">Tùy chọn</label>
+                                                <div class="form-check mt-2">
+                                                    {{-- fix: unique id/for for each meal - checkbox có id unique --}}
+                                                    <input type="checkbox" 
+                                                           id="{{ $selfPayId }}"
+                                                           name="meal_plan[{{ $dayId }}][{{ $mealType }}][self_pay]" 
+                                                           value="1"
+                                                           class="form-check-input meal-self-pay-checkbox"
+                                                           {{ ($meal['self_pay'] ?? false) ? 'checked' : '' }}>
+                                                    {{-- fix: unique id/for for each meal - label có for trỏ đúng id của checkbox --}}
+                                                    <label for="{{ $selfPayId }}" class="form-check-label small">Tự túc</label>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    @endforeach
+                                </div>
+                            </div>
+                        @endforeach
+                    @endif
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
+                <button type="button" class="btn btn-primary" id="saveMealPlanBtn">
+                    <i class="far fa-save"></i> Lưu thay đổi
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+{{-- CSS đảm bảo modal không bị che và có thể tương tác --}}
+<style>
+    /* Đảm bảo modal có z-index cao hơn tất cả element khác */
+    /* Bootstrap 5 modal mặc định có z-index: 1055, backdrop: 1050 */
+    #mealPlanModal {
+        z-index: 1055 !important;
+        position: fixed !important;
+    }
+    
+    /* Đảm bảo modal-dialog có pointer-events để nhận click */
+    /* Bootstrap mặc định modal-dialog có pointer-events: none, cần override */
+    #mealPlanModal .modal-dialog {
+        pointer-events: auto !important;
+        z-index: 1056 !important;
+        position: relative !important;
+    }
+    
+    /* Đảm bảo modal-content có thể tương tác */
+    #mealPlanModal .modal-content {
+        pointer-events: auto !important;
+        position: relative !important;
+    }
+    
+    /* Đảm bảo tất cả phần tử trong modal có thể tương tác */
+    #mealPlanModal .modal-content * {
+        pointer-events: auto !important;
+    }
+    
+    /* Đảm bảo modal-body có thể scroll và tương tác */
+    #mealPlanModal .modal-body {
+        pointer-events: auto !important;
+        overflow-y: auto !important;
+    }
+    
+    /* dùng select chuẩn, bỏ custom dropdown để tránh bug chồng option */
+    /* Đảm bảo row không cắt dropdown - overflow visible để dropdown hiển thị đầy đủ */
+    #mealPlanModal .row {
+        overflow: visible !important;
+    }
+    
+    #mealPlanModal .card-body {
+        overflow: visible !important;
+    }
+    
+    /* Đảm bảo select là native, không bị transform bởi niceSelect */
+    #mealPlanModal select {
+        display: block !important;
+        width: 100% !important;
+        position: relative !important;
+        z-index: auto !important;
+        -webkit-appearance: menulist !important;
+        -moz-appearance: menulist !important;
+        appearance: menulist !important;
+    }
+    
+    /* Ẩn nice-select wrapper nếu có trong modal */
+    #mealPlanModal .nice-select {
+        display: none !important;
+    }
+    
+    /* Đảm bảo select gốc hiển thị */
+    #mealPlanModal select[data-no-nice-select="true"] {
+        display: block !important;
+        visibility: visible !important;
+        opacity: 1 !important;
+    }
+    
+    /* Đảm bảo backdrop không che modal */
+    .modal-backdrop {
+        z-index: 1054 !important;
+    }
+    
+    /* Đảm bảo không có element nào che modal khi mở */
+    body.modal-open .page-wrapper {
+        position: relative !important;
+        z-index: auto !important;
+        pointer-events: auto !important;
+    }
+    
+    body.modal-open .tour-details-page,
+    body.modal-open .container,
+    body.modal-open section {
+        position: relative;
+        z-index: auto !important;
+    }
+    
+    /* Ẩn các overlay/backdrop khác khi modal mở */
+    body.modal-open .page-wrapper::before,
+    body.modal-open .page-wrapper::after,
+    body.modal-open .tour-details-page::before,
+    body.modal-open .tour-details-page::after,
+    body.modal-open .overlay::before,
+    body.modal-open .overlay::after {
+        display: none !important;
+        z-index: -1 !important;
+        pointer-events: none !important;
+    }
+    
+    /* Đảm bảo page-wrapper không chặn modal */
+    body.modal-open .page-wrapper > *:not(.modal):not(.modal-backdrop) {
+        pointer-events: auto !important;
+    }
+    
+    /* Đảm bảo các input/select trong modal không bị disabled bởi CSS */
+    #mealPlanModal select,
+    #mealPlanModal input[type="checkbox"],
+    #mealPlanModal button {
+        pointer-events: auto !important;
+        cursor: pointer !important;
+    }
+    
+    /* fix: unique id/for for each meal - đảm bảo mỗi select hoạt động độc lập */
+    /* Ngăn browser tự động scroll đến phần tử khác khi click */
+    #mealPlanModal .meal-level-select,
+    #mealPlanModal .meal-type-select {
+        position: relative !important;
+        z-index: auto !important;
+    }
+    
+    /* Đảm bảo mỗi row (mỗi bữa) là một container độc lập */
+    /* dùng select chuẩn, bỏ custom dropdown để tránh bug chồng option */
+    #mealPlanModal .row {
+        position: relative;
+        isolation: isolate; /* Tạo stacking context riêng cho mỗi row */
+        overflow: visible !important; /* Đảm bảo dropdown không bị cắt */
+    }
+    
+    #mealPlanModal .card-body {
+        overflow: visible !important; /* Đảm bảo dropdown không bị cắt */
+    }
+    
+    /* Đảm bảo select là native, không bị transform bởi niceSelect */
+    /* Sửa dropdown 2 mũi tên - chỉ dùng mũi tên native của browser, không thêm custom */
+    #mealPlanModal select {
+        display: block !important;
+        width: 100% !important;
+        position: relative !important;
+        z-index: auto !important;
+        /* Dùng native dropdown của browser, không thêm custom arrow */
+        -webkit-appearance: menulist !important;
+        -moz-appearance: menulist !important;
+        appearance: menulist !important;
+        /* Loại bỏ background-image custom nếu có */
+        background-image: none !important;
+        background-position: unset !important;
+        background-repeat: unset !important;
+    }
+    
+    /* Loại bỏ pseudo-element tạo mũi tên thừa */
+    #mealPlanModal select::after,
+    #mealPlanModal select::before {
+        display: none !important;
+        content: none !important;
+    }
+    
+    /* Loại bỏ wrapper có mũi tên custom */
+    #mealPlanModal .form-select-wrapper::after,
+    #mealPlanModal .select-wrapper::after {
+        display: none !important;
+    }
+    
+    /* Ẩn nice-select wrapper nếu có trong modal */
+    #mealPlanModal .nice-select {
+        display: none !important;
+    }
+    
+    /* Đảm bảo select gốc hiển thị */
+    #mealPlanModal select[data-no-nice-select="true"],
+    #mealPlanModal select {
+        display: block !important;
+        visibility: visible !important;
+        opacity: 1 !important;
+    }
+    
+    /* Đảm bảo nút đóng modal có thể click */
+    #mealPlanModal .btn-close {
+        pointer-events: auto !important;
+        cursor: pointer !important;
+        z-index: 1057 !important;
+    }
+</style>
+
+{{-- JavaScript xử lý meal plan --}}
+<script>
+(function() {
+    const saveBtn = document.getElementById('saveMealPlanBtn');
+    const mealPlanForm = document.getElementById('mealPlanForm');
+    const modal = document.getElementById('mealPlanModal');
+    
+    if (!saveBtn || !mealPlanForm) return;
+    
+    // dùng select chuẩn, bỏ custom dropdown để tránh bug chồng option
+    // Hủy niceSelect nếu đã được apply cho select trong modal
+    function destroyNiceSelectInModal() {
+        if (typeof jQuery !== 'undefined' && jQuery.fn.niceSelect) {
+            jQuery('#mealPlanModal select').each(function() {
+                const $select = jQuery(this);
+                const $niceSelect = $select.next('.nice-select');
+                if ($niceSelect.length) {
+                    // Destroy niceSelect
+                    $select.niceSelect('destroy');
+                    // Đảm bảo select hiển thị
+                    $select.css({
+                        'display': 'block',
+                        'visibility': 'visible',
+                        'opacity': '1'
+                    });
+                }
+            });
+        }
+    }
+    
+    // Hủy niceSelect khi modal được mở
+    if (modal) {
+        modal.addEventListener('shown.bs.modal', function() {
+            destroyNiceSelectInModal();
+        });
+        
+        // Cũng hủy ngay nếu modal đã mở
+        if (modal.classList.contains('show')) {
+            destroyNiceSelectInModal();
+        }
+    }
+    
+    // Ngăn niceSelect apply vào select trong modal (nếu script.js chạy sau)
+    // Sử dụng MutationObserver để theo dõi và destroy niceSelect ngay khi nó xuất hiện
+    if (modal && typeof MutationObserver !== 'undefined') {
+        const niceSelectObserver = new MutationObserver(function(mutations) {
+            jQuery('#mealPlanModal select').each(function() {
+                const $select = jQuery(this);
+                if ($select.next('.nice-select').length) {
+                    destroyNiceSelectInModal();
+                }
+            });
+        });
+        
+        niceSelectObserver.observe(modal, {
+            childList: true,
+            subtree: true
+        });
+        
+        // Cũng check ngay khi script load xong
+        if (document.readyState === 'complete') {
+            setTimeout(destroyNiceSelectInModal, 100);
+        } else {
+            window.addEventListener('load', function() {
+                setTimeout(destroyNiceSelectInModal, 100);
+            });
+        }
+    }
+    
+    // Disable select khi checkbox tự túc được chọn
+    // fix: unique id/for for each meal - đảm bảo chỉ ảnh hưởng đến select trong cùng row (cùng bữa)
+    function toggleMealInputs(checkbox) {
+        // Tìm row chứa checkbox này (mỗi bữa là một row riêng)
+        const row = checkbox.closest('.row');
+        if (!row) return;
+        
+        // Chỉ tìm select trong row này, không ảnh hưởng đến bữa khác
+        const selects = row.querySelectorAll('.meal-level-select, .meal-type-select');
+        selects.forEach(select => {
+            // Chỉ disable khi checkbox được check, nhưng vẫn giữ pointer-events
+            if (checkbox.checked) {
+                select.disabled = true;
+                select.style.opacity = '0.5';
+                select.style.cursor = 'not-allowed';
+                select.style.pointerEvents = 'none'; // Chặn click nhưng vẫn có thể lấy value
+            } else {
+                select.disabled = false;
+                select.style.opacity = '1';
+                select.style.cursor = 'pointer';
+                select.style.pointerEvents = 'auto';
+            }
+        });
+    }
+    
+    // Khởi tạo trạng thái ban đầu
+    // fix: unique id/for for each meal - mỗi checkbox được xử lý độc lập
+    document.querySelectorAll('.meal-self-pay-checkbox').forEach(cb => {
+        toggleMealInputs(cb);
+        // Đảm bảo event handler chỉ ảnh hưởng đến checkbox hiện tại
+        cb.addEventListener('change', function(e) {
+            e.stopPropagation(); // Ngăn event bubble lên
+            toggleMealInputs(this); // this = checkbox hiện tại
+        });
+    });
+    
+    // fix: unique id/for for each meal - đảm bảo mỗi select hoạt động độc lập
+    // Ngăn browser tự động scroll/focus đến phần tử khác khi click
+    document.querySelectorAll('#mealPlanModal .meal-level-select, #mealPlanModal .meal-type-select').forEach(select => {
+        select.addEventListener('focus', function(e) {
+            // Đảm bảo focus vào đúng select này, không scroll đến phần tử khác
+            e.stopPropagation();
+        });
+        
+        select.addEventListener('change', function(e) {
+            // Đảm bảo change event chỉ ảnh hưởng đến select này
+            e.stopPropagation();
+        });
+    });
+    
+    // Xử lý lưu meal plan
+    saveBtn.addEventListener('click', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        
+        const optionIndex = document.getElementById('option_index_input')?.value || '{{ $optionIndex }}';
+        
+        // Chuyển FormData thành object
+        const mealPlanData = {};
+        
+        // Lấy tất cả các select và checkbox
+        const allMealInputs = mealPlanForm.querySelectorAll('[name^="meal_plan["]');
+        
+        allMealInputs.forEach(input => {
+            const name = input.name;
+            // Parse key: meal_plan[1][breakfast][level]
+            const match = name.match(/meal_plan\[(\d+)\]\[(\w+)\]\[(\w+)\]/);
+            if (match) {
+                const [, dayId, mealType, field] = match;
+                if (!mealPlanData[dayId]) mealPlanData[dayId] = {};
+                if (!mealPlanData[dayId][mealType]) mealPlanData[dayId][mealType] = {};
+                
+                // Xử lý checkbox
+                if (input.type === 'checkbox') {
+                    mealPlanData[dayId][mealType][field] = input.checked;
+                } else {
+                    // Lấy giá trị (disabled select vẫn có value)
+                    mealPlanData[dayId][mealType][field] = input.value || input.options[input.selectedIndex]?.value || '';
+                }
+            }
+        });
+        
+        // Đảm bảo tất cả các bữa đều có đầy đủ thông tin
+        // Nếu thiếu, thêm giá trị mặc định
+        const allDays = new Set();
+        const allMealTypes = ['breakfast', 'lunch', 'dinner'];
+        
+        Object.keys(mealPlanData).forEach(dayId => {
+            allDays.add(dayId);
+            allMealTypes.forEach(mealType => {
+                if (!mealPlanData[dayId][mealType]) {
+                    mealPlanData[dayId][mealType] = {
+                        level: 'standard',
+                        type: 'restaurant',
+                        self_pay: false
+                    };
+                } else {
+                    // Đảm bảo có đầy đủ các field
+                    if (!mealPlanData[dayId][mealType].hasOwnProperty('level')) {
+                        mealPlanData[dayId][mealType].level = 'standard';
+                    }
+                    if (!mealPlanData[dayId][mealType].hasOwnProperty('type')) {
+                        mealPlanData[dayId][mealType].type = 'restaurant';
+                    }
+                    if (!mealPlanData[dayId][mealType].hasOwnProperty('self_pay')) {
+                        mealPlanData[dayId][mealType].self_pay = false;
+                    }
+                }
+            });
+        });
+        
+        console.log('Meal plan data to send:', mealPlanData);
+        console.log('Option index:', optionIndex);
+        console.log('URL:', `{{ route('build-tour.update-meals', ['index' => $optionIndex]) }}`);
+        
+        // Kiểm tra dữ liệu trước khi gửi
+        if (Object.keys(mealPlanData).length === 0) {
+            alert('Không có dữ liệu meal plan để gửi. Vui lòng kiểm tra lại.');
+            saveBtn.disabled = false;
+            saveBtn.innerHTML = '<i class="far fa-save"></i> Lưu thay đổi';
+            return;
+        }
+        
+        // Gửi AJAX
+        saveBtn.disabled = true;
+        saveBtn.innerHTML = '<i class="far fa-spinner fa-spin"></i> Đang lưu...';
+        
+        const url = `{{ route('build-tour.update-meals', ['index' => $optionIndex]) }}`;
+        const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content;
+        
+        console.log('Sending request to:', url);
+        console.log('CSRF Token:', csrfToken ? 'Found' : 'NOT FOUND');
+        
+        fetch(url, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': csrfToken,
+                'Accept': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest'
+            },
+            body: JSON.stringify({
+                meal_plan: mealPlanData
+            })
+        })
+        .then(response => {
+            console.log('Response status:', response.status);
+            console.log('Response ok:', response.ok);
+            
+            // Đọc response text trước để debug
+            return response.text().then(text => {
+                console.log('Response text:', text);
+                try {
+                    return JSON.parse(text);
+                } catch (e) {
+                    console.error('Failed to parse JSON:', e);
+                    console.error('Response text:', text);
+                    throw new Error('Invalid JSON response: ' + text.substring(0, 100));
+                }
+            });
+        })
+        .then(data => {
+            console.log('Response data:', data);
+            if (data.success) {
+                // Hiển thị thông báo thành công
+                if (typeof toastr !== 'undefined') {
+                    toastr.success(data.message, 'Thành công');
+                } else {
+                    alert(data.message);
+                }
+                
+                // Đóng modal
+                const bsModal = bootstrap.Modal.getInstance(modal);
+                if (bsModal) {
+                    bsModal.hide();
+                }
+                
+                // Reload trang để cập nhật giá và hiển thị mô tả mới
+                setTimeout(() => {
+                    window.location.reload();
+                }, 1000);
+            } else {
+                if (typeof toastr !== 'undefined') {
+                    toastr.error(data.message, 'Lỗi');
+                } else {
+                    alert(data.message);
+                }
+                saveBtn.disabled = false;
+                saveBtn.innerHTML = '<i class="far fa-save"></i> Lưu thay đổi';
+            }
+        })
+        .catch(error => {
+            console.error('Error details:', error);
+            console.error('Error message:', error.message);
+            console.error('Error stack:', error.stack);
+            
+            let errorMessage = 'Có lỗi xảy ra khi lưu. Vui lòng thử lại.';
+            if (error.message) {
+                errorMessage += '\nChi tiết: ' + error.message;
+            }
+            
+            if (typeof toastr !== 'undefined') {
+                toastr.error(errorMessage, 'Lỗi', {timeOut: 10000});
+            } else {
+                alert(errorMessage);
+            }
+            saveBtn.disabled = false;
+            saveBtn.innerHTML = '<i class="far fa-save"></i> Lưu thay đổi';
+        });
+    });
+})();
 </script>
 
 @include('clients.blocks.footer')

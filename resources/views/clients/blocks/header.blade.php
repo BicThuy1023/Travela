@@ -131,6 +131,10 @@
                                             <a href="{{ route('destination') }}">Điểm đến</a>
                                         </li>
 
+                                        <li class="{{ Request::url() == route('client.promotions.index') ? 'active' : '' }}">
+                                            <a href="{{ route('client.promotions.index') }}">Khuyến mãi</a>
+                                        </li>
+
                                         <li class="{{ Request::url() == route('contact') ? 'active' : '' }}">
                                             <a href="{{ route('contact') }}">Liên Hệ</a>
                                         </li>

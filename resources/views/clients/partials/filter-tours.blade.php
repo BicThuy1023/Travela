@@ -1,3 +1,4 @@
+@if($tours->count() > 0)
 @foreach ($tours as $tour)
     <div class="col-xl-4 col-md-6" style="margin-bottom: 30px">
         <div class="destination-item tour-grid style-three bgc-lighter block_tours equal-block-fix" data-aos="fade-up"
@@ -39,7 +40,13 @@
         </div>
     </div>
 @endforeach
+@else
+<div class="col-12 text-center py-5">
+    <p class="text-muted mb-0">Không tìm thấy tour nào phù hợp với bộ lọc của bạn.</p>
+</div>
+@endif
 
+@if($tours->count() > 0)
 <div class="col-lg-12">
     <ul class="pagination justify-content-center pt-15 flex-wrap pagination-tours" data-aos="fade-up"
         data-aos-duration="1500" data-aos-offset="50">
@@ -73,3 +80,4 @@
         @endif
     </ul>
 </div>
+@endif

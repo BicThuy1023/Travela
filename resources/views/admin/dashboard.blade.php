@@ -20,7 +20,7 @@
                     </div>
                     <div class="col-md-3 col-sm-4  tile_stats_count">
                         <span class="count_top"><i class="fa fa-user"></i> Số người dùng đăng ký</span>
-                        <div class="count green"><i class="fa fa-sort-asc"></i> 2,500</div>
+                        <div class="count green"><i class="fa fa-sort-asc"></i> {{ number_format($summary['totalUsers'], 0, ',', '.') }}</div>
                     </div>
                     <div class="col-md-3 col-sm-4  tile_stats_count">
                         <span class="count_top"><i class="fa fa-user"></i> Tổng doanh thu</span>

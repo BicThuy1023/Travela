@@ -133,8 +133,16 @@
                         <span>Giảm giá:</span>
                         <div>
                             <span class="total-price-booked">
-                                {{ number_format($tour_booked->numAdults * $tour_booked->priceAdult + $tour_booked->numChildren * $tour_booked->priceChild - $tour_booked->totalPrice, 0, ',', '.') }}
-                                VNĐ
+                                @php
+                                    // Với custom tour, dùng discountAmount từ model
+                                    // Với tour thông thường, tính từ công thức cũ
+                                    if (isset($tour_booked->isCustomTour) && $tour_booked->isCustomTour && isset($tour_booked->discountAmount)) {
+                                        $discountValue = $tour_booked->discountAmount;
+                                    } else {
+                                        $discountValue = $tour_booked->numAdults * $tour_booked->priceAdult + $tour_booked->numChildren * $tour_booked->priceChild - $tour_booked->totalPrice;
+                                    }
+                                @endphp
+                                {{ number_format($discountValue, 0, ',', '.') }} VNĐ
                             </span>
                         </div>
                     </div>
@@ -156,10 +164,10 @@
                     @if (isset($tour_booked->isCustomTour) && $tour_booked->isCustomTour)
                         {{-- Custom tour đã hoàn thành: không có nút đánh giá --}}
                     @else
-                        <a href="{{ route('tour-detail', ['id' => $tour_booked->tourId]) }}" class="booking-btn"
-                            style="display: inline-block; text-align: center;">
-                            Đánh giá
-                        </a>
+                    <a href="{{ route('tour-detail', ['id' => $tour_booked->tourId]) }}" class="booking-btn"
+                        style="display: inline-block; text-align: center;">
+                        Đánh giá
+                    </a>
                     @endif
                 @elseif (!empty($canCancel) && $canCancel)
                     {{-- Hiển thị nút Hủy Tour nếu $canCancel = true --}}
